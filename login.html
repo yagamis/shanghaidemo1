@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能公厕 - 登录</title>
+    <style>
+        .page-title {
+            text-align: center;
+            color: #007bff;
+            font-size: 24px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+        .login-form {
+            padding: 20px;
+            max-width: 300px;
+            margin: 20px auto;
+        }
+        .form-item {
+            margin-bottom: 15px;
+        }
+        .form-item input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        .login-type {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .type-btn {
+            padding: 5px 15px;
+            margin: 0 5px;
+            border: 1px solid #007bff;
+            background: white;
+            color: #007bff;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .type-btn.active {
+            background: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="page-title">智能公厕</h1>
+    <div class="login-form">
+        <div class="login-type">
+            <button class="type-btn active" onclick="switchType('user')">用户登录</button>
+            <button class="type-btn" onclick="switchType('admin')">管理员登录</button>
+        </div>
+        <div class="form-item">
+            <input type="text" id="username" placeholder="请输入用户名" value="user1">
+        </div>
+        <div class="form-item">
+            <input type="password" id="password" placeholder="请输入密码" value="user1">
+        </div>
+        <button class="login-btn" onclick="login()">登录</button>
+    </div>
+    <script>
+        function switchType(type) {
+            const btns = document.querySelectorAll('.type-btn');
+            btns.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const username = document.getElementById('username');
+            const password = document.getElementById('password');
+            
+            if (type === 'admin') {
+                username.value = 'admin';
+                password.value = 'admin';
+            } else {
+                username.value = 'user1';
+                password.value = 'user1';
+            }
+        }
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username === 'admin' && password === 'admin') {
+                localStorage.setItem('isAdmin', 'true');
+                localStorage.setItem('username', 'admin');
+                window.location.href = 'home.html';
+            } else if (username === 'user1' && password === 'user1') {
+                localStorage.setItem('isAdmin', 'false');
+                localStorage.setItem('username', 'user1');
+                window.location.href = 'home.html';
+            } else {
+                alert('用户名或密码错误！');
+            }
+        }
+    </script>
+</body>
+</html> 

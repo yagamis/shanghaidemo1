@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>厕位详情</title>
+    <style>
+        .header {
+            padding: 15px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+        }
+        .back-btn {
+            margin-right: 15px;
+            cursor: pointer;
+        }
+        .info-card {
+            margin: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            background: white;
+        }
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        .control-panel {
+            margin: 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .control-btn {
+            padding: 15px 10px;
+            text-align: center;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+        .control-btn:active {
+            background: #f0f0f0;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="back-btn" onclick="goBack()">←</div>
+        <h2>厕位详情</h2>
+    </div>
+
+    <div class="info-card">
+        <div class="info-item">
+            <span>状态</span>
+            <span id="status"></span>
+        </div>
+        <div class="info-item">
+            <span>已使用时长</span>
+            <span id="usageTime"></span>
+        </div>
+        <div class="info-item">
+            <span>温度</span>
+            <span id="temperature"></span>
+        </div>
+        <div class="info-item">
+            <span>烟雾检测</span>
+            <span id="smoke"></span>
+        </div>
+        <div class="info-item">
+            <span>上锁状态</span>
+            <span id="lockStatus"></span>
+        </div>
+        <div class="info-item">
+            <span>剩余纸巾</span>
+            <span id="paper"></span>
+        </div>
+    </div>
+
+    <div id="adminPanel" class="control-panel hidden">
+        <div class="control-btn" onclick="handleControl('maleOnly')">仅男厕</div>
+        <div class="control-btn" onclick="handleControl('femaleOnly')">仅女厕</div>
+        <div class="control-btn" onclick="handleControl('disable')">禁用</div>
+        <div class="control-btn" onclick="handleControl('maintenance')">维修</div>
+        <div class="control-btn" onclick="handleControl('unlockMale')">紧急开锁：男厕</div>
+        <div class="control-btn" onclick="handleControl('unlockFemale')">紧急开锁：女厕</div>
+    </div>
+
+    <script src="js/stall-detail.js"></script>
+</body>
+</html> 

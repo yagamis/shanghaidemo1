@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上海市公共厕所地图</title>
+    <!-- 引入高德地图 JS API -->
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=c07e23b452db6beb0888affe458aa0e0"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        #container {
+            width: 100%;
+            height: 100vh;
+        }
+
+        .search-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            z-index: 100;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 10px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .filter-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: #fff;
+            padding: 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .filter-btn {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            border-radius: 15px;
+            font-size: 14px;
+            background: #fff;
+            cursor: pointer;
+        }
+
+        .filter-btn.active {
+            background: #1989fa;
+            color: #fff;
+            border-color: #1989fa;
+        }
+
+        .info-window {
+            padding: 10px;
+            max-width: 300px;
+        }
+
+        .info-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .info-address {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-detail {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .location-btn {
+            position: fixed;
+            right: 20px;
+            bottom: 100px;
+            width: 40px;
+            height: 40px;
+            background: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 100;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    
+    <div class="search-box">
+        <input type="text" class="search-input" placeholder="搜索周边公厕">
+    </div>
+
+    <div class="filter-bar">
+        <button class="filter-btn active">全部</button>
+        <button class="filter-btn">24小时</button>
+        <button class="filter-btn">残疾人友好</button>
+        <button class="filter-btn">第三卫生间</button>
+    </div>
+
+    <div class="location-btn">📍</div>
+
+    <script>
+        // 初始化地图
+        const map = new AMap.Map('container', {
+            zoom: 13,
+            center: [121.473658, 31.230378], // 上海市中心坐标
+            resizeEnable: true
+        });
+
+        // 添加定位控件
+        map.plugin(['AMap.Geolocation'], function() {
+            const geolocation = new AMap.Geolocation({
+                enableHighAccuracy: true,
+                timeout: 10000,
+                buttonPosition: 'RB',
+                buttonOffset: new AMap.Pixel(10, 20),
+                zoomToAccuracy: true
+            });
+            map.addControl(geolocation);
+        });
+
+        // 创建标记点
+        function createMarker(toilet) {
+            const marker = new AMap.Marker({
+                position: new AMap.LngLat(toilet.longitude, toilet.latitude),
+                icon: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png',
+                title: toilet.name
+            });
+
+            // 创建信息窗体
+            const content = `
+                <div class="info-window">
+                    <div class="info-title">${toilet.name}</div>
+                    <div class="info-address">${toilet.address}</div>
+                    <div class="info-detail">
+                        <p>开放时间：${toilet.openTime || '24小时'}</p>
+                        <p>残疾人设施：${toilet.hasDisabledFacilities ? '有' : '无'}</p>
+                        <p>第三卫生间：${toilet.hasThirdToilet ? '有' : '无'}</p>
+                    </div>
+                </div>
+            `;
+
+            const infoWindow = new AMap.InfoWindow({
+                content: content,
+                offset: new AMap.Pixel(0, -30)
+            });
+
+            // 绑定点击事件
+            marker.on('click', () => {
+                infoWindow.open(map, marker.getPosition());
+            });
+
+            return marker;
+        }
+
+        // 模拟厕所数据
+        const toilets = [
+            {
+                name: '人民广场公共厕所',
+                address: '上海市黄浦区人民广场',
+                longitude: 121.475,
+                latitude: 31.233,
+                openTime: '24小时',
+                hasDisabledFacilities: true,
+                hasThirdToilet: true
+            },
+            // 添加更多厕所数据...
+        ];
+
+        // 将所有厕所标记添加到地图
+        const markers = toilets.map(toilet => createMarker(toilet));
+        map.add(markers);
+
+        // 搜索功能
+        const searchInput = document.querySelector('.search-input');
+        searchInput.addEventListener('input', (e) => {
+            const keyword = e.target.value.trim();
+            if (keyword) {
+                markers.forEach(marker => {
+                    const title = marker.getTitle().toLowerCase();
+                    if (title.includes(keyword.toLowerCase())) {
+                        marker.show();
+                    } else {
+                        marker.hide();
+                    }
+                });
+            } else {
+                markers.forEach(marker => marker.show());
+            }
+        });
+
+        // 筛选功能
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const filter = btn.textContent;
+                markers.forEach(marker => {
+                    const toilet = toilets.find(t => t.name === marker.getTitle());
+                    if (filter === '全部') {
+                        marker.show();
+                    } else if (filter === '24小时' && toilet.openTime === '24小时') {
+                        marker.show();
+                    } else if (filter === '残疾人友好' && toilet.hasDisabledFacilities) {
+                        marker.show();
+                    } else if (filter === '第三卫生间' && toilet.hasThirdToilet) {
+                        marker.show();
+                    } else {
+                        marker.hide();
+                    }
+                });
+            });
+        });
+
+        // 定位按钮
+        document.querySelector('.location-btn').addEventListener('click', () => {
+            map.plugin('AMap.Geolocation', function() {
+                const geolocation = new AMap.Geolocation({
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    zoomToAccuracy: true
+                });
+                map.addControl(geolocation);
+                geolocation.getCurrentPosition();
+            });
+        });
+    </script>
+</body>
+</html>
