@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新增厕位</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #333;
+        }
+
+        .header {
+            padding: 15px;
+            background: white;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .back-btn {
+            font-size: 20px;
+            margin-right: 15px;
+            cursor: pointer;
+            color: #666;
+            border: none;
+            background: none;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+
+        .back-btn:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .form-card {
+            margin: 15px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .form-item {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            color: #666;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: all 0.3s;
+            background: #f8f8f8;
+        }
+
+        .form-input:focus {
+            border-color: #2196F3;
+            background: white;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(33,150,243,0.1);
+        }
+
+        /* 单选按钮组样式 */
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            padding: 5px 0;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #f8f8f8;
+            transition: all 0.3s;
+        }
+
+        .radio-item:hover {
+            background: #f0f0f0;
+        }
+
+        .radio-item input[type="radio"] {
+            margin: 0;
+            width: 18px;
+            height: 18px;
+            accent-color: #2196F3;
+        }
+
+        /* 下拉选择框样式 */
+        .form-select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            background-color: #f8f8f8;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-select:focus {
+            border-color: #2196F3;
+            background-color: white;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(33,150,243,0.1);
+        }
+
+        /* 错误提示样式 */
+        .error-text {
+            color: #f44336;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        /* 保存按钮样式 */
+        .save-btn {
+            width: 100%;
+            padding: 14px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .save-btn:hover {
+            background: #1976D2;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .save-btn:active {
+            transform: translateY(0);
+        }
+
+        .save-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Toast 样式 */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 24px;
+            color: white;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: rgba(76, 175, 80, 0.9);
+        }
+
+        .toast.error {
+            background: rgba(244, 67, 54, 0.9);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="goBack()">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <h1>新增厕位</h1>
+    </div>
+
+    <div class="form-card">
+        <div class="form-item">
+            <span class="form-label">厕位编号</span>
+            <input type="number" class="form-input" id="stallNumber" min="1" placeholder="请输入厕位编号">
+            <div class="error-text" id="numberError">请输入有效的厕位编号</div>
+        </div>
+        <div class="form-item">
+            <span class="form-label">性别</span>
+            <div class="radio-group">
+                <label class="radio-item">
+                    <input type="radio" name="gender" value="男" checked>
+                    <span>男</span>
+                </label>
+                <label class="radio-item">
+                    <input type="radio" name="gender" value="女">
+                    <span>女</span>
+                </label>
+            </div>
+        </div>
+        <div class="form-item">
+            <span class="form-label">初始状态</span>
+            <select class="form-select" id="stallState">
+                <option value="empty">空闲</option>
+                <option value="occupied">占用</option>
+                <option value="fault">故障</option>
+                <option value="maintenance">维修</option>
+                <option value="disabled">禁用</option>
+            </select>
+        </div>
+        <div class="form-item">
+            <span class="form-label">星闪模组ID</span>
+            <input type="text" class="form-input" id="moduleId" placeholder="请输入星闪模组ID">
+            <div class="error-text" id="moduleError">请输入星闪模组ID</div>
+        </div>
+        <button class="save-btn" onclick="saveStall()">保存</button>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // 获取当前厕所数据
+        function getCurrentToilet() {
+            const params = new URLSearchParams(window.location.search);
+            const toiletName = params.get('toilet');
+            const toiletsData = JSON.parse(localStorage.getItem('toiletsData')) || [];
+            return toiletsData.find(t => t.name === decodeURIComponent(toiletName));
+        }
+
+        // 获取返回URL
+        function getReturnUrl() {
+            const currentToilet = getCurrentToilet();
+            if (!currentToilet) return 'home.html';
+            return `detail.html?name=${encodeURIComponent(currentToilet.name)}`;
+        }
+
+        // 页面加载时显示建议的厕位编号
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentToilet = getCurrentToilet();
+            if (currentToilet) {
+                const suggestedNumber = currentToilet.stalls.length + 1;
+                document.getElementById('stallNumber').value = suggestedNumber;
+            }
+        });
+
+        // 验证表单
+        function validateForm() {
+            const number = document.getElementById('stallNumber').value;
+            const moduleId = document.getElementById('moduleId').value;
+            let isValid = true;
+
+            // 验证编号
+            if (!number || number < 1) {
+                document.getElementById('numberError').style.display = 'block';
+                isValid = false;
+            } else {
+                document.getElementById('numberError').style.display = 'none';
+            }
+
+            // 验证模组ID
+            if (!moduleId.trim()) {
+                document.getElementById('moduleError').style.display = 'block';
+                isValid = false;
+            } else {
+                document.getElementById('moduleError').style.display = 'none';
+            }
+
+            return isValid;
+        }
+
+        // Toast提示函数
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // 保存新厕位
+        function saveStall() {
+            if (!validateForm()) return;
+
+            const number = parseInt(document.getElementById('stallNumber').value);
+            const gender = document.querySelector('input[name="gender"]:checked').value;
+            const state = document.getElementById('stallState').value;
+            const moduleId = document.getElementById('moduleId').value;
+
+            const toiletsData = JSON.parse(localStorage.getItem('toiletsData')) || [];
+            const params = new URLSearchParams(window.location.search);
+            const toiletName = params.get('toilet');
+            const toiletIndex = toiletsData.findIndex(t => t.name === decodeURIComponent(toiletName));
+
+            if (toiletIndex !== -1) {
+                // 检查编号是否已存在
+                if (toiletsData[toiletIndex].stalls.some(stall => stall.number === number)) {
+                    showToast('该编号已存在', 'error');
+                    return;
+                }
+
+                // 获取状态对应的显示文本
+                const statusText = {
+                    empty: '空闲',
+                    occupied: '占用',
+                    fault: '故障',
+                    maintenance: '维修',
+                    disabled: '禁用'
+                }[state];
+
+                // 创建新厕位
+                const newStall = {
+                    number: number,
+                    gender: gender,
+                    status: statusText,
+                    state: state,
+                    moduleId: moduleId
+                };
+
+                // 添加到厕位列表
+                toiletsData[toiletIndex].stalls.push(newStall);
+                
+                // 按编号排序
+                toiletsData[toiletIndex].stalls.sort((a, b) => a.number - b.number);
+                
+                // 保存更新后的数据
+                localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
+                localStorage.setItem('currentToilet', JSON.stringify(toiletsData[toiletIndex]));
+
+                // 显示成功提示并返回
+                showToast('新增厕位成功', 'success');
+                setTimeout(() => {
+                    window.location.href = getReturnUrl();
+                }, 1500);
+            }
+        }
+
+        // 返回上一页
+        function goBack() {
+            window.location.href = getReturnUrl();
+        }
+    </script>
+</body>
+</html> 
