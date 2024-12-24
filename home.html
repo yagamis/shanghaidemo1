@@ -3,166 +3,456 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能公厕 - 主页</title>
+    <title>智能公厕</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        .tab-container {
-            position: fixed;
-            width: 100%;
+        /* 暗黑模式样式 */
+        :root {
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #eeeeee;
+            --header-bg: #ffffff;
+        }
+        
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #ffffff;
+            --border-color: #333333;
+            --header-bg: #1e1e1e;
+        }
+        
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+        
+        .page-container {
+            background: var(--bg-color);
+        }
+        
+        .page-header {
+            background: var(--header-bg);
+        }
+        
+        .settings-list {
+            background: var(--card-bg);
+        }
+        
+        .settings-item {
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+        
+        /* 开关按钮样式 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
             bottom: 0;
-            background: #fff;
-            border-top: 1px solid #ddd;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
         }
-        .tabs {
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
         }
-        .tab {
-            flex: 1;
+        
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* 基础样式 */
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        /* 页面标题 */
+        .page-header {
+            padding: 15px 20px;
+            background: white;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .page-header h1 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+            font-weight: normal;
             text-align: center;
-            padding: 5px 15px;
+        }
+
+        /* 列表样式 */
+        .toilet-list {
+            padding: 0 0 60px 0;
+            background: #f5f5f5;
+        }
+
+        .toilet-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
             cursor: pointer;
         }
-        .tab.active {
+
+        .toilet-info {
+            flex: 1;
+        }
+
+        .toilet-info h3 {
+            font-size: 16px;
+            margin: 0 0 8px 0;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .toilet-info p {
+            font-size: 13px;
+            color: #666;
+            margin: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .toilet-info .distance {
+            color: #999;
+            font-size: 12px;
+        }
+
+        /* 评分样式 */
+        .rating {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            color: #ffa000;
+            margin-left: 8px;
+        }
+
+        .rating i {
+            font-size: 14px;
+        }
+
+        .rating-count {
+            color: #999;
+            font-size: 12px;
+        }
+
+        /* 状态统计样式 */
+        .stall-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+        }
+
+        .stall-stats span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: #666;
+            background: #f5f5f5;
+            padding: 3px 8px;
+            border-radius: 12px;
+        }
+
+        .male-stats i {
+            color: #1976d2;
+            font-size: 14px;
+        }
+
+        .female-stats i {
+            color: #d81b60;
+            font-size: 14px;
+        }
+
+        /* 状态标签样式 */
+        .toilet-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .toilet-status.normal {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .toilet-status.warning {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        /* 底部导航栏 */
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            background: white;
+            padding: 8px 0;
+            border-top: 1px solid #eee;
+        }
+
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #666;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .tab-item.active {
             color: #007bff;
         }
-        .toilet-list {
-            padding: 15px;
-            margin-bottom: 60px;
+
+        .tab-item i {
+            font-size: 20px;
+            margin-bottom: 3px;
         }
-        .toilet-count {
-            margin-bottom: 15px;
-            font-weight: bold;
+
+        /* 页面容器样式 */
+        #homePage, #settingsPage {
+            min-height: calc(100vh - 60px);
+            padding-bottom: 60px;
+            background: #f5f5f5;
         }
-        .toilet-item {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-        }
-        .toilet-name {
-            font-size: 16px;
-            margin-bottom: 5px;
-        }
-        .toilet-distance {
-            font-size: 14px;
-            color: #666;
-        }
-        .page {
+
+        /* 重要：修改显示控制 */
+        .page-container {
             display: none;
-            padding: 15px;
-            margin-bottom: 60px;
         }
-        .page.active {
+
+        .page-container.active {
             display: block;
         }
-        .menu-list {
+
+        /* 设置页面样式 */
+        .settings-list {
+            margin: 15px;
             background: white;
             border-radius: 8px;
-            margin-bottom: 20px;
+            overflow: hidden;
         }
-        .menu-item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
+
+        .settings-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
             cursor: pointer;
         }
-        .menu-item:last-child {
+
+        .settings-item:last-child {
             border-bottom: none;
         }
-        .menu-item:active {
+
+        .settings-item span {
+            color: #333;
+            font-size: 15px;
+        }
+
+        .settings-item i {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .settings-item:active {
             background: #f5f5f5;
         }
-        .menu-item::after {
-            content: ">";
-            color: #999;
-        }
-        .logout-btn {
-            width: 100%;
-            padding: 15px;
-            background: #ff4d4f;
+
+        /* Toast 样式 */
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 100px;  /* 位于评分按钮上方 */
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
             color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;  /* 防止toast影响其他元素的点击 */
         }
-        .logout-btn:active {
-            background: #ff7875;
+
+        .toast.show {
+            opacity: 1;
         }
-        .profile-header {
-            background: #f8f9fa;
-            padding: 20px 15px;
-            margin-bottom: 20px;
+
+        /* 成功和错误状态 */
+        .toast.success {
+            background: rgba(76, 175, 80, 0.9);
         }
-        .profile-title {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
-        .profile-avatar {
-            display: flex;
-            align-items: center;
-            padding: 10px 0;
-        }
-        .avatar-circle {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: #007bff;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            margin-right: 15px;
-        }
-        .username {
-            font-size: 18px;
-            font-weight: bold;
+
+        .toast.error {
+            background: rgba(244, 67, 54, 0.9);
         }
     </style>
 </head>
 <body>
-    <div id="homePage" class="page active">
-        <div class="toilet-list">
-            <div class="toilet-count"></div>
-            <div id="toiletList"></div>
+    <!-- 首页内容 -->
+    <div id="homePage" class="page-container active">
+        <div class="page-header">
+            <h1>附近公厕</h1>
+        </div>
+        <div id="toiletList" class="toilet-list"></div>
+    </div>
+
+    <!-- 我的页面 -->
+    <div id="settingsPage" class="page-container">
+        <div class="page-header">
+            <h1>我的</h1>
+        </div>
+        <div class="settings-list">
+            <div class="settings-item">
+                <span>暗黑模式</span>
+                <label class="switch">
+                    <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-item" onclick="logout()">
+                <span>退出登录</span>
+                <i class="fas fa-chevron-right"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 底部导航栏 -->
+    <div class="tab-bar">
+        <div class="tab-item active" onclick="switchTab('home')">
+            <i class="fas fa-home"></i>
+            <span>首页</span>
+        </div>
+        <div class="tab-item" onclick="switchTab('settings')">
+            <i class="fas fa-user"></i>
+            <span>我的</span>
         </div>
     </div>
 
-    <div id="profilePage" class="page">
-        <div class="profile-header">
-            <div class="profile-title">我的</div>
-            <div class="profile-avatar">
-                <div class="avatar-circle" id="avatarCircle"></div>
-                <div class="username" id="usernameText"></div>
-            </div>
-        </div>
-        <div class="menu-list">
-            <div class="menu-item" onclick="handleMenuClick('account')">
-                账号管理
-            </div>
-            <div class="menu-item" onclick="handleMenuClick('privacy')">
-                隐私设置
-            </div>
-            <div class="menu-item" onclick="handleMenuClick('notification')">
-                通知设置
-            </div>
-            <div class="menu-item" onclick="handleMenuClick('language')">
-                语言选择
-            </div>
-        </div>
-        <button class="logout-btn" onclick="logout()">退出登录</button>
-    </div>
+    <!-- 添加 Toast 容器 -->
+    <div id="toast" class="toast"></div>
 
-    <div class="tab-container">
-        <div class="tabs">
-            <div class="tab active" onclick="switchTab(0)">首页</div>
-            <div class="tab" onclick="switchTab(1)">我的</div>
-        </div>
-    </div>
+    <script>
+        // 切换tab
+        function switchTab(tab) {
+            // 获取页面元素
+            const homePage = document.getElementById('homePage');
+            const settingsPage = document.getElementById('settingsPage');
+            const tabs = document.querySelectorAll('.tab-item');
+            
+            // 切换页面显示
+            if (tab === 'home') {
+                homePage.classList.add('active');
+                settingsPage.classList.remove('active');
+                tabs[0].classList.add('active');
+                tabs[1].classList.remove('active');
+                document.title = '附近公厕';
+            } else if (tab === 'settings') {
+                homePage.classList.remove('active');
+                settingsPage.classList.add('active');
+                tabs[0].classList.remove('active');
+                tabs[1].classList.add('active');
+                document.title = '我的';
+            }
+
+            // 保存当前tab状态
+            localStorage.setItem('currentTab', tab);
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('isAdmin');
+            showToast('已退出登录', 'success');
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 1000);
+        }
+
+        // 主题切换功能
+        function toggleTheme() {
+            const isDark = document.getElementById('themeToggle').checked;
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+        
+        // 初始化主题设置
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.getElementById('themeToggle').checked = savedTheme === 'dark';
+        }
+
+        // 页面加载时的处理
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化主题
+            initTheme();
+            
+            // 检查是否是从登录页面跳转来的
+            const referrer = document.referrer;
+            if (referrer.includes('login.html')) {
+                switchTab('home');
+                localStorage.removeItem('currentTab');
+            } else {
+                const lastTab = localStorage.getItem('currentTab');
+                if (lastTab) {
+                    switchTab(lastTab);
+                }
+            }
+        });
+    </script>
+
     <script src="js/home.js"></script>
 </body>
 </html> 
