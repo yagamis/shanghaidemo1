@@ -1,0 +1,10 @@
+/build
+/node_modules
+/.idea
+/.preview
+/local.properties
+*.iml
+.cxx
+.DS_Store
+/oh_modules
+/.hvigor 

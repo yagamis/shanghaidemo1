@@ -1,0 +1,24 @@
+{
+	"icon":	{
+		"app":	"$media:16777256",
+		"logo":	"$media:16777228",
+		"back":	"$media:16777227",
+		"home":	"$media:16777258",
+		"user":	"$media:16777234",
+		"toilet":	"$media:16777232",
+		"location":	"$media:16777229",
+		"walking":	"$media:16777226",
+		"star":	"$media:16777235",
+		"stats":	"$media:16777257",
+		"add":	"$media:16777224",
+		"unlock":	"$media:16777225",
+		"door_open":	"$media:16777255",
+		"door_closed":	"$media:16777218",
+		"warning":	"$media:16777222",
+		"tools":	"$media:16777259",
+		"disabled":	"$media:16777223",
+		"smoke":	"$media:16777233",
+		"male":	"$media:16777221",
+		"female":	"$media:16777220"
+	}
+}

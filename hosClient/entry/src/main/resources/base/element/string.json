@@ -1,0 +1,12 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "智能公厕"
+    },
+    {
+      "name": "mainability_description",
+      "value": "智能公厕管理系统"
+    }
+  ]
+} 

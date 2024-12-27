@@ -1,0 +1,24 @@
+{
+  "icon": {
+    "app": "$media:app_icon",
+    "logo": "$media:logo",
+    "back": "$media:back",
+    "home": "$media:home",
+    "user": "$media:user",
+    "toilet": "$media:toilet",
+    "location": "$media:location",
+    "walking": "$media:walking",
+    "star": "$media:star",
+    "stats": "$media:stats",
+    "add": "$media:add",
+    "unlock": "$media:unlock",
+    "door_open": "$media:door_open",
+    "door_closed": "$media:door_closed",
+    "warning": "$media:warning",
+    "tools": "$media:tools",
+    "disabled": "$media:disabled",
+    "smoke": "$media:smoke",
+    "male": "$media:male",
+    "female": "$media:female"
+  }
+} 
