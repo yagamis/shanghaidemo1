@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能公厕</title>
+    <title>智能卫生间</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="js/stats.js"></script>
+    <script src="js/toast.js"></script>
     <style>
         /* 基础样式 */
         body {
@@ -172,7 +174,7 @@
         }
 
         /* 页面容器样式 */
-        #homePage, #settingsPage {
+        #homePage, #settingsPage, #statsPage {
             min-height: calc(100vh - 60px);
             padding-bottom: 60px;
             background: #f5f5f5;
@@ -251,6 +253,263 @@
         .toast.error {
             background: rgba(244, 67, 54, 0.9);
         }
+
+        /* 统计页面样式 */
+        .stats-container {
+            padding: 15px;
+            padding-bottom: 75px; /* 确保内容不被底部导航栏遮挡 */
+        }
+
+        .filter-bar {
+            margin-bottom: 15px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            background: white;
+            padding: 5px;
+            border-radius: 8px;
+        }
+
+        .filter-btn {
+            flex: 1;
+            padding: 8px 0;
+            border: none;
+            border-radius: 6px;
+            background: none;
+            color: #666;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .filter-btn:not(.active):hover {
+            background: #f5f5f5;
+        }
+
+        .toilet-stats-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .toilet-stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .toilet-stats-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .toilet-stats-total {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .gender-stats {
+            display: flex;
+            gap: 15px;
+            margin: 10px 0;
+        }
+
+        .gender-stats-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px;
+            border-radius: 4px;
+            background: #f5f5f5;
+        }
+
+        .gender-stats-item.male {
+            color: #1976d2;
+        }
+
+        .gender-stats-item.female {
+            color: #d81b60;
+        }
+
+        .stall-stats-list {
+            margin-top: 10px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .stall-stats-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        /* 异常状态统计样式 */
+        .abnormal-stats {
+            margin: 10px 0;
+            padding: 10px;
+            background: #fff3e0;
+            border-radius: 4px;
+        }
+        
+        .abnormal-header {
+            font-size: 13px;
+            color: #f57c00;
+            margin-bottom: 8px;
+        }
+        
+        .abnormal-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .abnormal-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .abnormal-item.fault {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .abnormal-item.maintenance {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .abnormal-item.smoke {
+            background: #fafafa;
+            color: #616161;
+        }
+
+        /* 预约记录页面样式 */
+        .reservation-list {
+            padding: 15px;
+        }
+
+        .reservation-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .reservation-item .toilet-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .reservation-item .stall-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .reservation-item .stall-number {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .reservation-item .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .status-badge.active {
+            background: #e3f2fd;
+            color: #2196F3;
+        }
+
+        .status-badge.expired {
+            background: #ffebee;
+            color: #f44336;
+        }
+
+        .reservation-item .time {
+            color: #999;
+            font-size: 12px;
+        }
+
+        .reservation-item .cancel-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            float: right;
+            margin-top: -4px;
+        }
+
+        .reservation-item .cancel-btn:hover {
+            background: #d32f2f;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+
+        /* 预约记录页面头部样式 */
+        #reservationsPage .page-header {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            position: relative;
+        }
+
+        #reservationsPage .page-header h1 {
+            flex: 1;
+            text-align: center;
+            margin: 0;
+            font-size: 18px;
+        }
+
+        #reservationsPage .back-btn {
+            position: absolute;
+            left: 15px;
+            font-size: 18px;
+            color: #333;
+            cursor: pointer;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+        }
+
+        #reservationsPage .back-btn:active {
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -267,7 +526,12 @@
         <div class="page-header">
             <h1>我的</h1>
         </div>
+        
         <div class="settings-list">
+            <div class="settings-item" onclick="showReservations()">
+                <span>我的预约</span>
+                <i class="fas fa-chevron-right"></i>
+            </div>
             <div class="settings-item" onclick="logout()">
                 <span>退出登录</span>
                 <i class="fas fa-chevron-right"></i>
@@ -275,11 +539,41 @@
         </div>
     </div>
     
+    <!-- 统计页面 -->
+    <div id="statsPage" class="page-container">
+        <div class="page-header">
+            <h1>使用统计</h1>
+        </div>
+        <div class="stats-container">
+            <div class="filter-bar">
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="today" onclick="switchFilter(this, 'today')">今日</button>
+                    <button class="filter-btn" data-filter="week" onclick="switchFilter(this, 'week')">本周</button>
+                    <button class="filter-btn" data-filter="month" onclick="switchFilter(this, 'month')">本月</button>
+                </div>
+            </div>
+            <div class="stats-content" id="toiletStats"></div>
+        </div>
+    </div>
+    
+    <!-- 预约记录页面 -->
+    <div id="reservationsPage" class="page-container">
+        <div class="page-header">
+            <i class="fas fa-arrow-left back-btn" onclick="hideReservations()"></i>
+            <h1>我的预约</h1>
+        </div>
+        <div id="reservationList" class="reservation-list"></div>
+    </div>
+    
     <!-- 底部导航栏 -->
     <div class="tab-bar">
         <div class="tab-item active" onclick="switchTab('home')">
             <i class="fas fa-home"></i>
             <span>首页</span>
+        </div>
+        <div class="tab-item" onclick="switchTab('stats')" id="statsTab" style="display: none;">
+            <i class="fas fa-chart-bar"></i>
+            <span>统计</span>
         </div>
         <div class="tab-item" onclick="switchTab('settings')">
             <i class="fas fa-user"></i>
@@ -291,44 +585,20 @@
     <div id="toast" class="toast"></div>
 
     <script>
-        // 切换tab
-        function switchTab(tab) {
-            // 获取页面元素
-            const homePage = document.getElementById('homePage');
-            const settingsPage = document.getElementById('settingsPage');
-            const tabs = document.querySelectorAll('.tab-item');
-            
-            // 切换页面显示
-            if (tab === 'home') {
-                homePage.classList.add('active');
-                settingsPage.classList.remove('active');
-                tabs[0].classList.add('active');
-                tabs[1].classList.remove('active');
-                document.title = '附近公厕';
-            } else if (tab === 'settings') {
-                homePage.classList.remove('active');
-                settingsPage.classList.add('active');
-                tabs[0].classList.remove('active');
-                tabs[1].classList.add('active');
-                document.title = '我的';
-            }
-
-            // 保存当前tab状态
-            localStorage.setItem('currentTab', tab);
-        }
-
-        // 退出登录
-        function logout() {
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('isAdmin');
-            showToast('已退出登录', 'success');
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 1000);
-        }
-
-        // 页面加载时的处理
+        // 页面加载时检查用户角色并控制统计Tab的显示
         document.addEventListener('DOMContentLoaded', () => {
+            const isAdmin = localStorage.getItem('isAdmin') === 'true';
+            const statsTab = document.getElementById('statsTab');
+            if (statsTab) {
+                statsTab.style.display = isAdmin ? 'flex' : 'none';
+            }
+            
+            // 如果当前在统计页面但不是管理员，则切换到首页
+            const currentTab = localStorage.getItem('currentTab');
+            if (currentTab === 'stats' && !isAdmin) {
+                switchTab('home');
+            }
+            
             // 检查是否是从登录页面跳转来的
             const referrer = document.referrer;
             if (referrer.includes('login.html')) {
@@ -341,6 +611,155 @@
                 }
             }
         });
+
+        // 切换tab
+        function switchTab(tab) {
+            // 如果不是管理员，禁止访问统计页面
+            if (tab === 'stats' && localStorage.getItem('isAdmin') !== 'true') {
+                return;
+            }
+            
+            // 获取页面元素
+            const homePage = document.getElementById('homePage');
+            const settingsPage = document.getElementById('settingsPage');
+            const statsPage = document.getElementById('statsPage');
+            const tabs = document.querySelectorAll('.tab-item');
+            
+            // 切换页面显示
+            if (tab === 'home') {
+                homePage.classList.add('active');
+                settingsPage.classList.remove('active');
+                statsPage.classList.remove('active');
+                tabs[0].classList.add('active');
+                tabs[1].classList.remove('active');
+                tabs[2].classList.remove('active');
+                document.title = '附近公厕';
+            } else if (tab === 'stats') {
+                homePage.classList.remove('active');
+                settingsPage.classList.remove('active');
+                statsPage.classList.add('active');
+                tabs[0].classList.remove('active');
+                tabs[1].classList.add('active');
+                tabs[2].classList.remove('active');
+                document.title = '使用统计';
+                updateToiletStats(); // 切换到统计页面时更新数据
+            } else if (tab === 'settings') {
+                homePage.classList.remove('active');
+                settingsPage.classList.add('active');
+                statsPage.classList.remove('active');
+                tabs[0].classList.remove('active');
+                tabs[1].classList.remove('active');
+                tabs[2].classList.add('active');
+                document.title = '我的';
+            }
+
+            // 保存当前tab状态
+            localStorage.setItem('currentTab', tab);
+        }
+
+        // 退出登录
+        function logout() {
+            // 保存统计数据
+            const unlockStats = localStorage.getItem('unlockStats');
+            
+            // 清除登录状态
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('isAdmin');
+            localStorage.removeItem('currentTab');
+            localStorage.removeItem('currentToilet');
+            localStorage.removeItem('toiletsData');
+            
+            // 恢复统计数据
+            if (unlockStats) {
+                localStorage.setItem('unlockStats', unlockStats);
+            }
+            
+            showToast('已退出登录', 'success');
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 1000);
+        }
+
+        // 切换筛选按钮
+        function switchFilter(btn, filter) {
+            // 更新按钮状态
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('active');
+            });
+            btn.classList.add('active');
+            
+            // 更新统计数据
+            updateToiletStats(filter);
+        }
+
+        // 更新厕所统计数据
+        function updateToiletStats(filter = 'today') {
+            const toiletStats = getStatsForRange(filter);
+            console.log('Toilet stats:', toiletStats);
+            
+            // 渲染统计数据
+            const statsContent = document.getElementById('toiletStats');
+            if (Object.keys(toiletStats).length === 0) {
+                statsContent.innerHTML = '<div class="no-data">暂无统计数据</div>';
+                return;
+            }
+            
+            statsContent.innerHTML = Object.entries(toiletStats)
+                .map(([toiletName, data]) => `
+                    <div class="toilet-stats-card">
+                        <div class="toilet-stats-header">
+                            <span class="toilet-stats-name">${toiletName}</span>
+                            <span class="toilet-stats-total">总使用：${data.totalCount}次</span>
+                        </div>
+                        <!-- 异常状态统计 -->
+                        ${data.abnormal.total > 0 ? `
+                            <div class="abnormal-stats">
+                                <div class="abnormal-header">异常状态统计</div>
+                                <div class="abnormal-items">
+                                    ${data.abnormal.fault > 0 ? `
+                                        <div class="abnormal-item fault">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <span>故障：${data.abnormal.fault}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${data.abnormal.maintenance > 0 ? `
+                                        <div class="abnormal-item maintenance">
+                                            <i class="fas fa-tools"></i>
+                                            <span>维修：${data.abnormal.maintenance}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${data.abnormal.smoke > 0 ? `
+                                        <div class="abnormal-item smoke">
+                                            <i class="fas fa-smoking"></i>
+                                            <span>烟雾：${data.abnormal.smoke}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                        <div class="gender-stats">
+                            <div class="gender-stats-item male">
+                                <i class="fas fa-male"></i>
+                                <span>男厕：${data.male}次</span>
+                            </div>
+                            <div class="gender-stats-item female">
+                                <i class="fas fa-female"></i>
+                                <span>女厕：${data.female}次</span>
+                            </div>
+                        </div>
+                        <div class="stall-stats-list">
+                            ${Object.entries(data.stalls)
+                                .sort(([a], [b]) => a - b)
+                                .map(([stallId, stallData]) => `
+                                    <div class="stall-stats-item">
+                                        <span>${stallId}号（${stallData.gender}）</span>
+                                        <span>${stallData.count}次</span>
+                                    </div>
+                                `).join('')}
+                        </div>
+                    </div>
+                `).join('') || '<div class="no-data">暂无统计数据</div>';
+        }
     </script>
 
     <script src="js/home.js"></script>

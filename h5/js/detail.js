@@ -13,16 +13,22 @@ function goBack() {
 
 // 跳转到厕位详情页
 function goToStallDetail(stallId, status, gender) {
+    // 保存统计数据
+    const unlockStats = localStorage.getItem('unlockStats');
+
     const currentToilet = JSON.parse(localStorage.getItem('currentToilet'));
     if (!currentToilet) return;
 
+    const params = new URLSearchParams();
+    params.set('stallId', stallId);
+    params.set('toilet', currentToilet.name);
+    params.set('id', stallId);
 
+    // 恢复统计数据
+    if (unlockStats) {
+        localStorage.setItem('unlockStats', unlockStats);
+    }
 
-    // 所有用户（包括管理员）都可以点击查看详情
-    const params = new URLSearchParams({
-        id: stallId,
-        toilet: currentToilet.name
-    });
     window.location.href = `stall-detail.html?${params.toString()}`;
 }
 
@@ -94,11 +100,27 @@ function getWarningIcon(state) {
     return icons[state] ? icons[state] : '';
 }
 
+// 预约超时时间（毫秒）
+const RESERVATION_TIMEOUT = 10000;
+
 // 处理开锁
 function handleUnlock(event, stallId, gender) {
     event.stopPropagation();
     
-    if (confirm(`确认要开启${stallId}号${gender}厕所吗？`)) {
+    const currentToilet = JSON.parse(localStorage.getItem('currentToilet'));
+    const stall = currentToilet.stalls[stallId - 1];
+    const currentUser = localStorage.getItem('currentUser');
+    
+    // 检查是否是预约状态
+    if (stall.state === 'reserved') {
+        // 如果不是预约人，不能开锁
+        if (stall.reservedBy !== currentUser) {
+            showToast('该厕位已被他人预约', 'error');
+            return;
+        }
+    }
+
+    showConfirm(`确认要开启${stallId}号${gender}厕所吗？`, () => {
         // 显示加载动画
         const loading = document.querySelector('.loading');
         if (loading) {
@@ -119,23 +141,9 @@ function handleUnlock(event, stallId, gender) {
                 currentToilet.stalls[stallId - 1].state = 'occupied';
                 currentToilet.stalls[stallId - 1].unlockTime = Date.now();
                 
-                // 记录开锁统计
-                const now = new Date();
-                const dateKey = now.toISOString().split('T')[0];
-                const stats = JSON.parse(localStorage.getItem('unlockStats') || '{}');
-                
-                if (!stats[dateKey]) {
-                    stats[dateKey] = {};
-                }
-                if (!stats[dateKey][stallId]) {
-                    stats[dateKey][stallId] = {
-                        count: 0,
-                        gender: gender
-                    };
-                }
-                
-                stats[dateKey][stallId].count++;
-                localStorage.setItem('unlockStats', JSON.stringify(stats));
+                // 记录开锁事件，确保传递厕所名称
+                console.log('Recording unlock for toilet:', currentToilet.name); // 调试日志
+                recordUnlock(stallId, gender, currentToilet.name);
                 
                 // 保存更新后的数据
                 localStorage.setItem('currentToilet', JSON.stringify(currentToilet));
@@ -176,22 +184,127 @@ function handleUnlock(event, stallId, gender) {
                 showToast(`${stallId}号厕位开锁成功！请在5分钟内进入`, 'success');
             }
         }, 1500);
+    }, () => {
+        // 如果用户取消，什么也不做
+    });
+}
+
+// 处理预约
+function handleReserve(event, stallId, gender) {
+    event.stopPropagation();
+    
+    const currentUser = localStorage.getItem('currentUser');
+    const currentToilet = JSON.parse(localStorage.getItem('currentToilet'));
+    const stall = currentToilet.stalls[stallId - 1];
+    
+    // 检查厕位状态
+    if (stall.state !== 'empty') {
+        showToast('该厕位不可预约', 'error');
+        return;
     }
+    
+    // 检查用户是否已有预约
+    const toiletsData = JSON.parse(localStorage.getItem('toiletsData'));
+    const hasReservation = toiletsData.some(toilet => 
+        toilet.stalls.some(stall => 
+            stall.reservedBy === currentUser && 
+            stall.state === 'reserved'  // 只检查状态为 reserved 的厕位
+        )
+    );
+    
+    if (hasReservation) {
+        showToast('您已有预约的厕位，请先取消当前预约', 'error');
+        return;
+    }
+    
+    showConfirm(`确认预约${stallId}号${gender}厕所吗？`, () => {
+        // 更新厕位状态
+        stall.state = 'reserved';
+        stall.status = '已预约';
+        stall.reservedBy = currentUser;
+        stall.reservationTime = Date.now();
+        
+        // 保存更新
+        localStorage.setItem('currentToilet', JSON.stringify(currentToilet));
+        
+        // 同步更新 toiletsData
+        const toiletIndex = toiletsData.findIndex(t => t.name === currentToilet.name);
+        if (toiletIndex !== -1) {
+            toiletsData[toiletIndex] = currentToilet;
+            localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
+        }
+        
+        // 设置预约超时
+        setTimeout(() => {
+            if (stall.state === 'reserved') {
+                // 重新获取最新数据
+                const updatedToiletsData = JSON.parse(localStorage.getItem('toiletsData'));
+                const updatedToilet = updatedToiletsData[toiletIndex];
+                const updatedStall = updatedToilet.stalls[stallId - 1];
+                
+                // 只有当厕位仍然是被同一用户预约的状态时才重置
+                if (updatedStall.state === 'reserved' && updatedStall.reservedBy === currentUser) {
+                    // 更新当前厕位状态
+                    updatedStall.state = 'empty';
+                    updatedStall.status = '空';
+                    updatedStall.reservedBy = null;
+                    
+                    // 清除所有厕位中该用户的预约状态
+                    updatedToiletsData.forEach(toilet => {
+                        toilet.stalls.forEach(s => {
+                            if (s.reservedBy === currentUser) {
+                                s.state = 'empty';
+                                s.status = '空';
+                                s.reservedBy = null;
+                            }
+                        });
+                    });
+                    
+                    // 保存更新后的数据
+                    localStorage.setItem('toiletsData', JSON.stringify(updatedToiletsData));
+                    localStorage.setItem('currentToilet', JSON.stringify(updatedToilet));
+                    
+                    // 刷新页面
+                    initPage();
+                    
+                    showToast('预约已超时，厕位已释放', 'warning');
+                }
+            }
+        }, RESERVATION_TIMEOUT);
+        
+        showToast('预约成功！请在10秒内完成开锁', 'success');
+        
+        // 刷新页面显示
+        initPage();
+    });
 }
 
 // 初始化页面
 function initPage() {
     try {
+        // 检查登录状态
+        if (!localStorage.getItem('isLoggedIn')) {
+            showToast('请先登录', 'error');
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 1000);
+            return;
+        }
+
+        // 检查并处理超时的预约
+        checkExpiredReservations();
+
         const currentToilet = JSON.parse(localStorage.getItem('currentToilet'));
         if (!currentToilet) {
             console.error('未找到公厕数据');
             return;
         }
 
-        document.getElementById('toiletName').textContent = currentToilet.name;
-
         const statusGrid = document.getElementById('statusGrid');
         statusGrid.innerHTML = currentToilet.stalls.map((stall, index) => {
+            const currentUser = localStorage.getItem('currentUser');
+            const isReservedByMe = stall.reservedBy === currentUser;
+            
             return `
                 <div class="grid-item ${stall.state}" onclick="goToStallDetail(${index + 1}, '${stall.status}', '${stall.gender}')">
                     <div class="stall-number">${index + 1}</div>
@@ -205,6 +318,17 @@ function initPage() {
                         </span>
                         ${getWarningIcon(stall.state)}
                         ${stall.state === 'empty' ? `
+                            <div class="button-group">
+                                <button class="unlock-btn" 
+                                        onclick="handleUnlock(event, ${index + 1}, '${stall.gender}')">
+                                    开锁
+                                </button>
+                                <button class="reserve-btn"
+                                        onclick="handleReserve(event, ${index + 1}, '${stall.gender}')">
+                                    预约
+                                </button>
+                            </div>
+                        ` : stall.state === 'reserved' && isReservedByMe ? `
                             <button class="unlock-btn" 
                                     onclick="handleUnlock(event, ${index + 1}, '${stall.gender}')">
                                 开锁
@@ -214,11 +338,69 @@ function initPage() {
                 </div>
             `;
         }).join('');
-
-      
     } catch (error) {
         console.error('初始化页面失败:', error);
-    
+    }
+}
+
+// 检查并处理超时的预约
+function checkExpiredReservations() {
+    const toiletsData = JSON.parse(localStorage.getItem('toiletsData'));
+    let hasChanges = false;
+
+    toiletsData.forEach(toilet => {
+        toilet.stalls.forEach((stall, index) => {
+            if (stall.state === 'reserved' && stall.reservationTime) {
+                const now = Date.now();
+                const reservationTime = parseInt(stall.reservationTime);
+                
+                // 如果预约已超过10秒
+                if (now - reservationTime > RESERVATION_TIMEOUT) {
+                    // 记录超时的预约到历史记录
+                    const reservationHistory = JSON.parse(localStorage.getItem('reservationHistory') || '[]');
+                    reservationHistory.push({
+                        toiletName: toilet.name,
+                        stallId: index + 1,
+                        gender: stall.gender,
+                        time: stall.reservationTime,
+                        status: 'expired',
+                        user: stall.reservedBy,
+                        expireTime: now
+                    });
+                    localStorage.setItem('reservationHistory', JSON.stringify(reservationHistory));
+
+                    stall.state = 'empty';
+                    stall.status = '空';
+                    stall.reservedBy = null;
+                    delete stall.reservationTime;
+                    hasChanges = true;
+                }
+            }
+        });
+    });
+
+    if (hasChanges) {
+        // 保存更新后的数据
+        localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
+        
+        // 更新当前厕所数据
+        const currentToilet = JSON.parse(localStorage.getItem('currentToilet'));
+        if (currentToilet) {
+            const updatedToilet = toiletsData.find(t => t.name === currentToilet.name);
+            if (updatedToilet) {
+                localStorage.setItem('currentToilet', JSON.stringify(updatedToilet));
+            }
+        }
+        
+        // 刷新预约列表显示
+        try {
+            updateReservationList();
+        } catch (error) {
+            console.log('Not in reservation page');
+        }
+
+        // 刷新当前页面
+        initPage();
     }
 }
 
@@ -228,7 +410,17 @@ window.goToStallDetail = goToStallDetail;
 window.handleUnlock = handleUnlock;
 
 // 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', initPage);
+document.addEventListener('DOMContentLoaded', () => {
+    initPage();
+    
+    // 每秒检查一次预约状态
+    const checkInterval = setInterval(checkExpiredReservations, 1000);
+
+    // 在页面卸载时清除定时器
+    window.addEventListener('unload', () => {
+        clearInterval(checkInterval);
+    });
+});
 
 // 添加状态循环切换函数
 function cycleStallStatus(stallId) {
@@ -300,9 +492,6 @@ function updateStatusIcon(item, state) {
     }
 }
 
-// 在页面加载时清除所有统计数据（临时添加，用于重置）
-localStorage.removeItem('unlockStats');
-
 // 获取统计数据
 function getUnlockStats() {
     return JSON.parse(localStorage.getItem('unlockStats') || '{}');
@@ -313,148 +502,6 @@ function saveUnlockStats(stats) {
     localStorage.setItem('unlockStats', JSON.stringify(stats));
 }
 
-// 记录开锁
-function recordUnlock(stallId, gender) {
-    const now = new Date();
-    const dateKey = now.toISOString().split('T')[0];
-    const stats = getUnlockStats();
-    
-    if (!stats[dateKey]) {
-        stats[dateKey] = {};
-    }
-    if (!stats[dateKey][stallId]) {
-        stats[dateKey][stallId] = {
-            count: 0,
-            gender: gender
-        };
-    }
-    
-    stats[dateKey][stallId].count++;
-    saveUnlockStats(stats);
-}
-
-// 显示统计弹窗
-function showStatsModal() {
-    document.getElementById('statsModal').style.display = 'block';
-    updateStatsView();
-}
-
-// 关闭统计弹窗
-function closeStatsModal() {
-    document.getElementById('statsModal').style.display = 'none';
-}
-
-// 更新统计视图
-function updateStatsView() {
-    const filter = document.getElementById('statsFilter').value;
-    const stats = JSON.parse(localStorage.getItem('unlockStats') || '{}');
-    const statsList = document.getElementById('statsList');
-    
-    // 获取日期范围
-    const dateRange = getDateRange(filter);
-    
-    // 统计数据
-    const stallStats = {};
-    let totalMale = 0;
-    let totalFemale = 0;
-    
-    // 计算各厕位统计和性别总计
-    for (const date of dateRange) {
-        const dateStats = stats[date] || {};
-        console.log('Date stats:', date, dateStats); // 添加调试日志
-        for (const [stallId, data] of Object.entries(dateStats)) {
-            console.log('Stall data:', stallId, data); // 添加调试日志
-            if (!stallStats[stallId]) {
-                stallStats[stallId] = {
-                    count: 0,
-                    gender: data.gender
-                };
-            }
-            stallStats[stallId].count += data.count;
-            
-            // 累计男女使用次数
-            if (data.gender === '男') {
-                totalMale += data.count;
-            } else {
-                totalFemale += data.count;
-            }
-        }
-    }
-    
-    console.log('Final stats:', stallStats, totalMale, totalFemale); // 添加调试日志
-    
-    // 渲染统计列表
-    const timeRange = filter === 'today' ? '今日' : (filter === 'week' ? '本周' : '本月');
-    
-    statsList.innerHTML = `
-        <!-- 总计统计 -->
-        <div class="stats-summary">
-            <h4>${timeRange}使用统计</h4>
-            <div class="stats-total">
-                <div class="stats-total-item male">
-                    <i class="fas fa-male"></i>
-                    <span>男厕：${totalMale}次</span>
-                </div>
-                <div class="stats-total-item female">
-                    <i class="fas fa-female"></i>
-                    <span>女厕：${totalFemale}次</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 分割线 -->
-        <div class="stats-divider"></div>
-        
-        <!-- 详细统计 -->
-        <div class="stats-details">
-            <h4>厕位详情</h4>
-            ${Object.entries(stallStats)
-                .sort(([a], [b]) => a - b)
-                .map(([stallId, data]) => `
-                    <div class="stats-item">
-                        <div class="stats-item-info">
-                            <span>${stallId}号</span>
-                            <span class="gender-badge ${data.gender === '男' ? 'male' : 'female'}">
-                                ${data.gender}
-                            </span>
-                        </div>
-                        <span class="stats-count">${data.count}次</span>
-                    </div>
-                `).join('') || '<div class="no-data">暂无数据</div>'}
-        </div>
-    `;
-}
-
-// 获取日期范围
-function getDateRange(filter) {
-    const today = new Date();
-    const dates = [];
-    
-    switch (filter) {
-        case 'today':
-            dates.push(today.toISOString().split('T')[0]);
-            break;
-            
-        case 'week':
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(today);
-                date.setDate(today.getDate() - i);
-                dates.push(date.toISOString().split('T')[0]);
-            }
-            break;
-            
-        case 'month':
-            for (let i = 0; i < 30; i++) {
-                const date = new Date(today);
-                date.setDate(today.getDate() - i);
-                dates.push(date.toISOString().split('T')[0]);
-            }
-            break;
-    }
-    
-    return dates;
-}
-
 // 在页面加载时添加关闭弹窗的点击事件
 window.onclick = function(event) {
     const modal = document.getElementById('statsModal');
@@ -463,10 +510,7 @@ window.onclick = function(event) {
     }
 }
 
-// 确保所有函数都在全局作用域
-window.showStatsModal = showStatsModal;
-window.closeStatsModal = closeStatsModal;
-window.updateStatsView = updateStatsView;
+
 
 let selectedScore = 0;
 
@@ -538,7 +582,7 @@ function submitRating() {
     }
 
     hideRatingDialog();
-    alert('评分成功！');
+    showToast('评分成功！', 'success');
 }
 
 // 初始化评分功能
@@ -551,3 +595,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+// 退出登录
+function logout() {
+    showConfirm('确认退出登录？', () => {
+        // 清除登录状态
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('isAdmin');
+        // 跳转到登录页
+        window.location.href = 'login.html';
+    });
+}

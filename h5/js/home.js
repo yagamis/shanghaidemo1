@@ -9,8 +9,8 @@ const toilets = [
         rating: 0,
         ratingCount: 0,
         stalls: [
-            { status: '空', gender: '女', state: 'empty' },      // 1号
-            { status: '占用', gender: '女', state: 'occupied' }, // 2号
+            { status: '空', gender: '女', state: 'empty', reservedBy: null },      // 1号
+            { status: '空', gender: '女', state: 'empty' },      // 2号
             { status: '空', gender: '男', state: 'empty' },      // 3号
             { status: '故障', gender: '男', state: 'fault' },    // 4号
             { status: '空', gender: '女', state: 'empty' },      // 5号
@@ -36,10 +36,10 @@ const toilets = [
         stalls: [
             { status: '空', gender: '男', state: 'empty' },      // 1号
             { status: '空', gender: '男', state: 'empty' },      // 2号
-            { status: '占用', gender: '男', state: 'occupied' }, // 3号
+            { status: '空', gender: '男', state: 'empty' },      // 3号
             { status: '维修', gender: '男', state: 'maintenance' }, // 4号
             { status: '空', gender: '女', state: 'empty' },      // 5号
-            { status: '占用', gender: '女', state: 'occupied' }, // 6号
+            { status: '空', gender: '女', state: 'empty' },      // 6号
             { status: '空', gender: '女', state: 'empty' },      // 7号
             { status: '空', gender: '男', state: 'empty' },      // 8号
             { status: '空', gender: '女', state: 'empty' },      // 9号
@@ -60,9 +60,9 @@ const toilets = [
             { status: '空', gender: '女', state: 'empty' },      // 1号
             { status: '空', gender: '女', state: 'empty' },      // 2号
             { status: '烟雾', gender: '女', state: 'smoke' },    // 3号
-            { status: '占用', gender: '女', state: 'occupied' }, // 4号
+            { status: '空', gender: '女', state: 'empty' },      // 4号
             { status: '空', gender: '男', state: 'empty' },      // 5号
-            { status: '占用', gender: '男', state: 'occupied' }, // 6号
+            { status: '空', gender: '男', state: 'empty' },      // 6号
             { status: '维修', gender: '男', state: 'maintenance' }, // 7号
             { status: '空', gender: '男', state: 'empty' },      // 8号
             { status: '空', gender: '男', state: 'empty' },      // 9号
@@ -87,7 +87,7 @@ const toilets = [
             { status: '空', gender: '女', state: 'empty' },      // 1号
             { status: '空', gender: '女', state: 'empty' },      // 2号
             { status: '空', gender: '女', state: 'empty' },      // 3号
-            { status: '占用', gender: '女', state: 'occupied' }, // 4号
+            { status: '空', gender: '女', state: 'empty' },      // 4号
             { status: '故障', gender: '女', state: 'fault' },    // 5号
             { status: '空', gender: '男', state: 'empty' },      // 6号
             { status: '空', gender: '男', state: 'empty' },      // 7号
@@ -111,11 +111,11 @@ const toilets = [
         stalls: [
             { status: '空', gender: '男', state: 'empty' },      // 1号
             { status: '空', gender: '男', state: 'empty' },      // 2号
-            { status: '占用', gender: '男', state: 'occupied' }, // 3号
+            { status: '空', gender: '男', state: 'empty' },      // 3号
             { status: '空', gender: '男', state: 'empty' },      // 4号
             { status: '空', gender: '女', state: 'empty' },      // 5号
             { status: '空', gender: '女', state: 'empty' },      // 6号
-            { status: '占用', gender: '女', state: 'occupied' }, // 7号
+            { status: '空', gender: '女', state: 'empty' },      // 7号
             { status: '烟雾', gender: '女', state: 'smoke' },    // 8号
             { status: '维修', gender: '女', state: 'maintenance' }, // 9号
             { status: '空', gender: '女', state: 'empty' },      // 10号
@@ -148,13 +148,12 @@ function calculateStats(stalls) {
 
 // 获取公厕数据
 function getToiletData() {
+    // 优先从 localStorage 获取数据
     const savedData = localStorage.getItem('toiletsData');
     if (savedData) {
         return JSON.parse(savedData);
     }
-    
-    // 保存默认数据
-    saveToiletData(toilets);
+    // 如果没有保存的数据，返回默认数据
     return toilets;
 }
 
@@ -228,6 +227,11 @@ function goToDetail(name) {
     if (toilet) {
         // 将当前选中的公厕数据存储到 localStorage
         localStorage.setItem('currentToilet', JSON.stringify(toilet));
+        // 同时更新 toiletsData，确保数据一致性
+        if (!localStorage.getItem('toiletsData')) {
+            localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
+        }
+        
         // 跳转到详情页
         window.location.href = `detail.html?name=${encodeURIComponent(name)}`;
     } else {
@@ -237,9 +241,15 @@ function goToDetail(name) {
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
+    // 检查登录状态
+    if (!localStorage.getItem('isLoggedIn')) {
+        window.location.href = 'login.html';
+        return;
+    }
+    
     // 如果 localStorage 中没有数据，初始化默认数据
     if (!localStorage.getItem('toiletsData')) {
-        saveToiletData(toilets);
+        localStorage.setItem('toiletsData', JSON.stringify(toilets));
     }
     
     // 初始化页面
@@ -254,13 +264,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 退出登录
 function logout() {
-    if (confirm('确认退出登录？')) {
+    showConfirm('确认退出登录？', () => {
         // 清除登录状态
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('isAdmin');
         // 跳转到登录页
         window.location.href = 'login.html';
-    }
+    });
 }
 
 // 确保函数在全局可用
@@ -290,3 +300,207 @@ window.addEventListener('stallStatusUpdate', (event) => {
     // 状态更新时刷新页面
     initPage();
 });
+
+// 预约超时时间（毫秒）与 detail.js 保持一致
+const RESERVATION_TIMEOUT = 10000;
+
+// 显示预约记录页面
+function showReservations() {
+    document.getElementById('settingsPage').classList.remove('active');
+    document.getElementById('reservationsPage').classList.add('active');
+    updateReservationList();
+
+    // 启动定时刷新
+    startReservationRefresh();
+}
+
+// 隐藏预约记录页面
+function hideReservations() {
+    document.getElementById('reservationsPage').classList.remove('active');
+    document.getElementById('settingsPage').classList.add('active');
+
+    // 停止定时刷新
+    stopReservationRefresh();
+}
+
+// 定时器ID
+let reservationRefreshTimer = null;
+
+// 启动定时刷新
+function startReservationRefresh() {
+    // 清除可能存在的旧定时器
+    if (reservationRefreshTimer) {
+        clearInterval(reservationRefreshTimer);
+    }
+
+    // 设置新的定时器，每秒刷新一次
+    reservationRefreshTimer = setInterval(() => {
+        if (document.getElementById('reservationsPage').classList.contains('active')) {
+            updateReservationList();
+        } else {
+            // 如果页面不再显示，停止定时器
+            stopReservationRefresh();
+        }
+    }, 1000);
+}
+
+// 停止定时刷新
+function stopReservationRefresh() {
+    if (reservationRefreshTimer) {
+        clearInterval(reservationRefreshTimer);
+        reservationRefreshTimer = null;
+    }
+}
+
+// 页面卸载时清理定时器
+window.addEventListener('unload', () => {
+    stopReservationRefresh();
+});
+
+// 获取预约记录
+function getReservationHistory() {
+    const currentUser = localStorage.getItem('currentUser');
+    const toiletsData = JSON.parse(localStorage.getItem('toiletsData')) || [];
+    const reservationHistory = JSON.parse(localStorage.getItem('reservationHistory') || '[]');
+    
+    // 获取当前有效预约
+    const activeReservations = toiletsData.reduce((acc, toilet) => {
+        toilet.stalls.forEach((stall, index) => {
+            if (stall.reservedBy === currentUser) {
+                const now = Date.now();
+                const reservationTime = parseInt(stall.reservationTime);
+                // 检查是否已超时
+                if (now - reservationTime > RESERVATION_TIMEOUT) {
+                    // 记录超时的预约
+                    const reservationHistory = JSON.parse(localStorage.getItem('reservationHistory') || '[]');
+                    reservationHistory.push({
+                        toiletName: toilet.name,
+                        stallId: index + 1,
+                        gender: stall.gender,
+                        time: stall.reservationTime,
+                        status: 'expired',
+                        user: currentUser,
+                        expireTime: now
+                    });
+                    localStorage.setItem('reservationHistory', JSON.stringify(reservationHistory));
+                    
+                    // 重置厕位状态
+                    stall.state = 'empty';
+                    stall.status = '空';
+                    stall.reservedBy = null;
+                    delete stall.reservationTime;
+                    
+                    // 保存更新后的数据
+                    localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
+                } else {
+                    acc.push({
+                        toiletName: toilet.name,
+                        stallId: index + 1,
+                        gender: stall.gender,
+                        time: stall.reservationTime,
+                        status: 'active',
+                        user: currentUser
+                    });
+                }
+            }
+        });
+        return acc;
+    }, []);
+    
+    // 合并并排序所有预约记录
+    return [...activeReservations, ...reservationHistory]
+        .filter(r => r.user === currentUser && r.time)
+        .sort((a, b) => b.time - a.time);
+}
+
+// 更新预约列表显示
+function updateReservationList() {
+    const reservationList = document.getElementById('reservationList');
+    if (!reservationList) return;
+    
+    const reservations = getReservationHistory();
+    
+    if (reservations.length === 0) {
+        reservationList.innerHTML = '<div class="no-data">暂无预约记录</div>';
+        return;
+    }
+    
+    reservationList.innerHTML = reservations.map(reservation => `
+        <div class="reservation-item">
+            <div class="toilet-name">${reservation.toiletName}</div>
+            <div class="stall-info">
+                <span class="stall-number">${reservation.stallId}号${reservation.gender}厕</span>
+                <span class="status-badge ${reservation.status}">
+                    ${getStatusText(reservation.status)}
+                </span>
+            </div>
+            <div class="time">预约时间：${new Date(reservation.time).toLocaleString()}</div>
+            ${reservation.status === 'expired' ? `
+                <div class="time">超时时间：${new Date(reservation.expireTime).toLocaleString()}</div>
+            ` : ''}
+            ${reservation.status === 'cancelled' ? `
+                <div class="time">取消时间：${new Date(reservation.cancelTime).toLocaleString()}</div>
+            ` : ''}
+            ${reservation.status === 'active' ? `
+                <button class="cancel-btn" onclick="cancelReservation('${reservation.toiletName}', ${reservation.stallId})">
+                    取消预约
+                </button>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+// 取消预约
+function cancelReservation(toiletName, stallId) {
+    showConfirm('确认取消预约？', () => {
+        const toiletsData = JSON.parse(localStorage.getItem('toiletsData'));
+        const toilet = toiletsData.find(t => t.name === toiletName);
+        
+        if (toilet && toilet.stalls[stallId - 1]) {
+            const stall = toilet.stalls[stallId - 1];
+            const currentUser = localStorage.getItem('currentUser');
+            
+            if (stall.reservedBy === currentUser) {
+                // 记录取消的预约
+                const reservationHistory = JSON.parse(localStorage.getItem('reservationHistory') || '[]');
+                reservationHistory.push({
+                    toiletName,
+                    stallId,
+                    gender: stall.gender,
+                    time: stall.reservationTime,
+                    status: 'cancelled',
+                    user: currentUser,
+                    cancelTime: Date.now()
+                });
+                localStorage.setItem('reservationHistory', JSON.stringify(reservationHistory));
+                
+                // 重置厕位状态
+                stall.state = 'empty';
+                stall.status = '空';
+                stall.reservedBy = null;
+                delete stall.reservationTime;
+                
+                localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
+                
+                // 更新显示
+                updateReservationList();
+                showToast('预约已取消', 'success');
+            }
+        }
+    });
+}
+
+// 确保函数在全局作用域可用
+window.showReservations = showReservations;
+window.hideReservations = hideReservations;
+window.cancelReservation = cancelReservation;
+
+// 获取预约状态文本
+function getStatusText(status) {
+    switch (status) {
+        case 'active': return '预约中';
+        case 'expired': return '已超时';
+        case 'cancelled': return '已取消';
+        default: return status;
+    }
+}

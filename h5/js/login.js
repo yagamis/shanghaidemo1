@@ -3,12 +3,16 @@ function login() {
     const password = document.getElementById('password').value;
 
     if (username === 'admin' && password === 'admin') {
+        localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('isAdmin', 'true');
+        localStorage.setItem('currentUser', username);
         window.location.href = 'home.html';
-    } else if (username === 'user1' && password === 'user1') {
+    } else if (username === 'user' && password === 'user') {
+        localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('isAdmin', 'false');
+        localStorage.setItem('currentUser', username);
         window.location.href = 'home.html';
     } else {
-        alert('用户名或密码错误！');
+        showToast('用户名或密码错误', 'error');
     }
 } 

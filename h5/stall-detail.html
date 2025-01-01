@@ -241,28 +241,39 @@
         }
 
         /* 紧急求助按钮样式 */
-        .emergency-help {
-            margin-top: 10px;
-            padding-top: 20px !important;
-            border-top: 1px dashed #eee !important;
+        .emergency-help.info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .emergency-help .info-label {
+            color: #666;
+        }
+
+        .emergency-help .info-value {
+            display: flex;
+            align-items: center;
         }
 
         .help-btn {
-            padding: 8px 16px;
-            border: 1px solid #f44336;
+            padding: 6px 12px;
+            background: #f44336;
+            color: white;
+            border: none;
             border-radius: 4px;
-            background: white;
-            color: #f44336;
             font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
             cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
             transition: all 0.3s;
         }
 
         .help-btn:hover {
-            background: #fff5f5;
+            background: #d32f2f;
         }
 
         .help-btn:active {
@@ -270,10 +281,12 @@
         }
 
         .help-btn.requested {
-            background: #ffebee;
-            border-color: #ffcdd2;
-            color: #d32f2f;
-            cursor: default;
+            background: #4caf50;
+            cursor: not-allowed;
+        }
+
+        .help-btn.requested:hover {
+            background: #43a047;
         }
 
         /* 紧急开锁按钮禁用状态 */
@@ -447,6 +460,46 @@
         .stats-item.danger span:last-child {
             color: #f44336;
         }
+
+        /* 结束使用按钮样式 */
+        .end-use-btn {
+            padding: 10px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .end-use-btn:hover {
+            background: #45a049;
+        }
+
+        .end-use-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* 按钮组样式 */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .button-group .end-use-btn {
+            flex: 2;  /* 结束使用按钮占更多空间 */
+        }
+
+        .button-group .help-btn {
+            flex: 1;  /* 呼叫帮助按钮占较少空间 */
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -464,6 +517,16 @@
                 <span id="stallGender"></span> / 
                 <span id="stallStatus"></span>
             </span>
+        </div>
+        <div class="info-item" id="endUseContainer">
+            <div class="button-group">
+                <button class="end-use-btn" onclick="endUse()">
+                    <i class="fas fa-door-open"></i> 结束使用
+                </button>
+                <button class="help-btn" onclick="requestEmergencyHelp()">
+                    <i class="fas fa-exclamation-circle"></i> 呼叫帮助
+                </button>
+            </div>
         </div>
         <div class="info-item">
             <span class="info-label">星闪模组ID</span>
@@ -495,14 +558,6 @@
         <div class="info-item">
             <span class="info-label">烟雾浓度</span>
             <span class="info-value" id="smoke">正常</span>
-        </div>
-        
-        <!-- 添加紧急求助按钮 -->
-        <div class="info-item emergency-help">
-            <span class="info-label">紧急求助</span>
-            <button class="help-btn" onclick="requestEmergencyHelp()">
-                <i class="fas fa-exclamation-circle"></i> 呼叫帮助
-            </button>
         </div>
     </div>
 
@@ -568,394 +623,20 @@
         <i class="fas fa-plus"></i>
     </button> -->
 
+    <!-- 将脚本移到 body 末尾 -->
+    <script src="js/stall-detail.js"></script>
     <script>
+        // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', () => {
-            // 首先检查是否是管理员并显示管理面板
-            if (localStorage.getItem('isAdmin') === 'true') {
-                document.getElementById('adminPanel').style.display = 'block';
-            }
-
-            // 从 URL 获取参数
-            const params = new URLSearchParams(window.location.search);
-            const stallId = params.get('id');
-            const toiletName = params.get('toilet');
-
-            // 获取厕所数据
-            const toiletsData = JSON.parse(localStorage.getItem('toiletsData')) || [];
-            const toilet = toiletsData.find(t => t.name === decodeURIComponent(toiletName));
-            
-            if (toilet && stallId) {
-                const stall = toilet.stalls[stallId - 1];
-                if (stall) {
-                    // 更新页面信息
-                    document.getElementById('stallNumber').textContent = stallId;
-                    document.getElementById('stallGender').textContent = stall.gender;
-                    
-                    // 创建状态标签
-                    const statusSpan = document.createElement('span');
-                    statusSpan.className = `status-badge status-${stall.state}`;
-                    statusSpan.textContent = stall.status;
-                    document.getElementById('stallStatus').appendChild(statusSpan);
-
-                    // 如果是占用状态，显示使用时长
-                    if (stall.state === 'occupied') {
-                        document.getElementById('useTime').textContent = '15分钟';
-                    }
-
-                    // 如果是管理员，设置管理面板的初始状态
-                    if (localStorage.getItem('isAdmin') === 'true') {
-                        // 获取所有管理员操作按钮
-                        const maleBtn = document.getElementById('maleBtn');
-                        const femaleBtn = document.getElementById('femaleBtn');
-                        const enableToggle = document.getElementById('enableToggle');
-                        const emergencyBtn = document.querySelector('.action-btn.emergency');
-                        const repairBtn = document.querySelector('.action-btn.repair');
-
-                        // 如果是占用状态，禁用所有操作
-                        if (stall.state === 'occupied') {
-                            // 禁用性别切换
-                            maleBtn.disabled = true;
-                            femaleBtn.disabled = true;
-
-                            // 禁用启用/禁用开关
-                            enableToggle.disabled = true;
-                            document.querySelector('.toggle-switch').classList.add('disabled');
-
-                            // 禁用维修完毕按钮
-                            repairBtn.disabled = true;
-
-                            // 紧急开锁按钮根据是否有紧急求助来决定状态
-                            emergencyBtn.disabled = !stall.emergency;
-                        } else {
-                            // 非占用状态下的正常初始化
-                            // 设置性别按钮状态
-                            if (stall.gender === '男') {
-                                maleBtn.classList.add('active');
-                            } else {
-                                femaleBtn.classList.add('active');
-                            }
-
-                            // 设置启用状态
-                            enableToggle.checked = stall.state !== 'disabled';
-                            document.getElementById('toggleLabel').textContent = 
-                                stall.state !== 'disabled' ? '启用' : '禁用';
-
-                            // 设置维修按钮状态
-                            repairBtn.disabled = !['fault', 'maintenance', 'smoke'].includes(stall.state);
-
-                            // 设置紧急开锁按钮状态
-                            emergencyBtn.disabled = !stall.emergency;
-                        }
-
-                        // 如果有紧急求助，激活紧急开锁按钮
-                        if (stall.emergency) {
-                            emergencyBtn.classList.add('active');
-                        }
-                    }
-
-                    // 如果是管理员，初始化维修状态按钮
-                    if (localStorage.getItem('isAdmin') === 'true') {
-                        const stall = toilet.stalls[stallId - 1];
-                        if (stall) {
-                            // 设置维修状态按钮的激活状态
-                            const buttons = document.querySelectorAll('.maintenance-btn');
-                            buttons.forEach(btn => {
-                                btn.classList.toggle('active', btn.dataset.state === stall.state);
-                                // 如果是占用状态，禁用所有维修状态按钮
-                                btn.disabled = stall.state === 'occupied';
-                            });
-                        }
-                    }
+            console.log('Page loaded, initializing...');
+            initPage();
+            // 启动自动刷新
+            const refreshInterval = setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    initPage();
                 }
-            }
-
-            // 显示/隐藏添加厕位按钮
-            if (localStorage.getItem('isAdmin') === 'true') {
-                document.getElementById('addStallBtn').style.display = 'flex';
-            }
+            }, 1000);
         });
-
-        // 切换性别
-        function changeGender(gender) {
-            const params = new URLSearchParams(window.location.search);
-            const stallId = params.get('id');
-            const toiletName = params.get('toilet');
-            
-            // 更新 toiletsData
-            const toiletsData = JSON.parse(localStorage.getItem('toiletsData')) || [];
-            const toiletIndex = toiletsData.findIndex(t => t.name === decodeURIComponent(toiletName));
-            
-            if (toiletIndex !== -1 && stallId) {
-                const stall = toiletsData[toiletIndex].stalls[stallId - 1];
-                if (stall) {
-                    // 更新厕位性别
-                    stall.gender = gender;
-                    
-                    // 保存到 toiletsData
-                    localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
-
-                    // 同步更新 currentToilet
-                    const currentToilet = toiletsData[toiletIndex];
-                    localStorage.setItem('currentToilet', JSON.stringify(currentToilet));
-
-                    // 更新页面显示
-                    document.getElementById('stallGender').textContent = gender;
-                    document.getElementById('maleBtn').classList.toggle('active', gender === '男');
-                    document.getElementById('femaleBtn').classList.toggle('active', gender === '女');
-
-                    // 显示提示
-                    showToast(`已将${stallId}号厕位设为${gender}厕`, 'success');
-                }
-            }
-        }
-
-        // 切换启用状态
-        function toggleEnable(enabled) {
-            const params = new URLSearchParams(window.location.search);
-            const stallId = params.get('id');
-            const toiletName = params.get('toilet');
-            
-            // 更新 toiletsData
-            const toiletsData = JSON.parse(localStorage.getItem('toiletsData')) || [];
-            const toiletIndex = toiletsData.findIndex(t => t.name === decodeURIComponent(toiletName));
-            
-            if (toiletIndex !== -1 && stallId) {
-                const stall = toiletsData[toiletIndex].stalls[stallId - 1];
-                if (stall) {
-                    // 更新厕位状态
-                    stall.state = enabled ? 'empty' : 'disabled';
-                    stall.status = enabled ? '空闲' : '禁用';
-                    
-                    // 保存到 toiletsData
-                    localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
-
-                    // 同步更新 currentToilet
-                    const currentToilet = toiletsData[toiletIndex];
-                    localStorage.setItem('currentToilet', JSON.stringify(currentToilet));
-
-                    // 更新显示
-                    document.getElementById('toggleLabel').textContent = enabled ? '启用' : '禁用';
-                    document.getElementById('stallStatus').innerHTML = `
-                        <span class="status-badge status-${stall.state}">${stall.status}</span>
-                    `;
-
-                    // 显示提示
-                    showToast(`已${enabled ? '启用' : '禁用'}${stallId}号厕位`, 'success');
-
-                    // 更新维修按钮状态
-                    const repairBtn = document.querySelector('.action-btn.repair');
-                    if (repairBtn) {
-                        repairBtn.disabled = !['fault', 'maintenance', 'smoke'].includes(stall.state);
-                    }
-                }
-            }
-        }
-
-        // 修改快捷操作函数
-        function quickAction(type) {
-            const params = new URLSearchParams(window.location.search);
-            const stallId = params.get('id');
-            const toiletName = params.get('toilet');
-            
-            // 更新 toiletsData
-            const toiletsData = JSON.parse(localStorage.getItem('toiletsData')) || [];
-            const toiletIndex = toiletsData.findIndex(t => t.name === decodeURIComponent(toiletName));
-            
-            if (toiletIndex !== -1 && stallId) {
-                const stall = toiletsData[toiletIndex].stalls[stallId - 1];
-                if (stall) {
-                    // 检查维修完毕按钮的使用条件
-                    if (type === 'repair' && !['fault', 'maintenance', 'smoke'].includes(stall.state)) {
-                        showToast('只有故障、维修或烟雾状态的厕位可以标记维修完毕', 'error');
-                        return;
-                    }
-
-                    // 更新厕位状态为空闲
-                    stall.state = 'empty';
-                    stall.status = '空闲';
-                    
-                    // 如果是紧急开锁，重置紧急状态
-                    if (type === 'emergency') {
-                        stall.emergency = false;
-                        const emergencyBtn = document.querySelector('.action-btn.emergency');
-                        if (emergencyBtn) {
-                            emergencyBtn.disabled = true;
-                            emergencyBtn.classList.remove('active');
-                        }
-                    }
-
-                    // 保存到 toiletsData
-                    localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
-
-                    // 同步更新 currentToilet
-                    const currentToilet = toiletsData[toiletIndex];
-                    localStorage.setItem('currentToilet', JSON.stringify(currentToilet));
-
-                    // 更新页面显示
-                    document.getElementById('stallStatus').innerHTML = `
-                        <span class="status-badge status-empty">空闲</span>
-                    `;
-
-                    // 更新启用开关状态
-                    document.getElementById('enableToggle').checked = true;
-                    document.getElementById('toggleLabel').textContent = '启用';
-
-                    // 禁用维修完毕按钮
-                    const repairBtn = document.querySelector('.action-btn.repair');
-                    if (repairBtn) {
-                        repairBtn.disabled = true;
-                    }
-
-                    // 显示对应的提示信息
-                    const message = type === 'emergency' ? '紧急开锁成功' : '维修完成，已恢复使用';
-                    showToast(message, 'success');
-                }
-            }
-        }
-
-        // 添加紧急求助功能
-        function requestEmergencyHelp() {
-            const helpBtn = document.querySelector('.help-btn');
-            const emergencyBtn = document.querySelector('.action-btn.emergency');
-            
-            // 更新按钮状态
-            helpBtn.classList.add('requested');
-            helpBtn.innerHTML = '<i class="fas fa-check-circle"></i> 已发送求助';
-            helpBtn.disabled = true;
-
-            // 如果是管理员，激活紧急开锁按钮
-            if (localStorage.getItem('isAdmin') === 'true' && emergencyBtn) {
-                emergencyBtn.classList.add('active');
-                emergencyBtn.disabled = false;
-            }
-
-            // 更新厕位状态为紧急求助
-            const params = new URLSearchParams(window.location.search);
-            const stallId = params.get('id');
-            const toiletName = params.get('toilet');
-            
-            const toiletsData = JSON.parse(localStorage.getItem('toiletsData')) || [];
-            const toiletIndex = toiletsData.findIndex(t => t.name === decodeURIComponent(toiletName));
-            
-            if (toiletIndex !== -1 && stallId) {
-                const stall = toiletsData[toiletIndex].stalls[stallId - 1];
-                if (stall) {
-                    stall.emergency = true;
-                    localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
-
-                    // 同步更新 currentToilet
-                    const currentToilet = toiletsData[toiletIndex];
-                    localStorage.setItem('currentToilet', JSON.stringify(currentToilet));
-                }
-            }
-
-            showToast('紧急求助已发送', 'success');
-        }
-
-        // 添加维修状态控制函数
-        function setMaintenanceState(state) {
-            const params = new URLSearchParams(window.location.search);
-            const stallId = params.get('id');
-            const toiletName = params.get('toilet');
-            
-            // 更新 toiletsData
-            const toiletsData = JSON.parse(localStorage.getItem('toiletsData')) || [];
-            const toiletIndex = toiletsData.findIndex(t => t.name === decodeURIComponent(toiletName));
-            
-            if (toiletIndex !== -1 && stallId) {
-                const stall = toiletsData[toiletIndex].stalls[stallId - 1];
-                if (stall) {
-                    // 如果厕位处于占用状态，不允许更改
-                    if (stall.state === 'occupied') {
-                        showToast('占用状态下不能更改维修状态', 'error');
-                        return;
-                    }
-
-                    // 更新厕位状态
-                    stall.state = state;
-                    switch (state) {
-                        case 'fault':
-                            stall.status = '故障';
-                            break;
-                        case 'maintenance':
-                            stall.status = '维修';
-                            break;
-                        case 'smoke':
-                            stall.status = '烟雾';
-                            break;
-                    }
-                    
-                    // 保存到 toiletsData
-                    localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
-
-                    // 同步更新 currentToilet
-                    const currentToilet = toiletsData[toiletIndex];
-                    localStorage.setItem('currentToilet', JSON.stringify(currentToilet));
-
-                    // 更新页面显示
-                    document.getElementById('stallStatus').innerHTML = `
-                        <span class="status-badge status-${state}">${stall.status}</span>
-                    `;
-
-                    // 更新按钮状态
-                    const buttons = document.querySelectorAll('.maintenance-btn');
-                    buttons.forEach(btn => {
-                        btn.classList.toggle('active', btn.dataset.state === state);
-                    });
-
-                    // 启用维修完毕按钮
-                    const repairBtn = document.querySelector('.action-btn.repair');
-                    if (repairBtn) {
-                        repairBtn.disabled = false;
-                    }
-
-                    // 显示提示
-                    showToast(`已将厕位状态设置为${stall.status}`, 'success');
-                }
-            }
-        }
-
-        // 跳转到新增厕位页面
-        function goToAddStall() {
-            const params = new URLSearchParams(window.location.search);
-            const toiletName = params.get('toilet');
-            window.location.href = `add-stall.html?toilet=${toiletName}`;
-        }
-
-        // 在生成随机数据的函数中添加新的属性
-        function generateRandomData(status) {
-            const paperLevels = ['少', '中', '多'];
-            const lightStatus = ['开', '关'];
-            
-            return {
-                // ... 现有的属性 ...
-                paperRemaining: paperLevels[Math.floor(Math.random() * paperLevels.length)],
-                lightOn: lightStatus[Math.floor(Math.random() * lightStatus.length)]
-            };
-        }
-
-        // 在更新页面内容的函数中添加新元素的更新
-        function updatePageContent(stall, stallId) {
-            // ... 现有的更新代码 ...
-            
-            // 更新厕纸状态
-            const paperStatus = document.getElementById('paperStatus');
-            if (paperStatus) {
-                paperStatus.textContent = data.paperRemaining;
-                if (data.paperRemaining === '少') {
-                    paperStatus.parentElement.classList.add('warning');
-                }
-            }
-            
-            // 更新照明状态
-            const lightStatus = document.getElementById('lightStatus');
-            if (lightStatus) {
-                lightStatus.textContent = data.lightOn;
-                if (data.lightOn === '关') {
-                    lightStatus.parentElement.classList.add('warning');
-                }
-            }
-        }
     </script>
 </body>
 </html> 

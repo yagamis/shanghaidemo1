@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能公厕App</title>
+    <title>智能卫生间</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         body {
@@ -90,17 +90,17 @@
             line-height: 1.5;
         }
 
-        .hero-image {
+        .hero-video {
             width: 100%;
             max-width: 500px;
-            height: auto;
             margin: 30px 0;
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             transition: transform 0.3s ease;
+            object-fit: cover;
         }
 
-        .hero-image:hover {
+        .hero-video:hover {
             transform: scale(1.02);
         }
 
@@ -154,15 +154,18 @@
 </head>
 <body>
     <div class="container">
-        <h1>智能公厕管理系统</h1>
+        <h1>智能卫生间</h1>
         <p class="description">
-            打造智能、高效、人性化的公共厕所管理解决方案，为用户提供便捷的如厕体验。
+            智能、高效、人性化的公共卫生间解决方案，直观、现代、免排队。
         </p>
         
         <div class="hero-section">
-            <img src="images/toilet_sign.jpg" alt="智能公厕系统" class="hero-image">
+            <video class="hero-video" autoplay loop muted playsinline>
+                <source src="images/smartrestroom.mp4" type="video/mp4">
+                您的浏览器不支持视频播放
+            </video>
             <div class="button-container">
-                <a href="login.html" class="cta-button"><i class="fas fa-sign-in-alt"></i> 立即使用</a>
+                <a href="login.html" class="cta-button"><i class="fas fa-sign-in-alt"></i> 马上体验</a>
             </div>
         </div>
 
@@ -193,7 +196,7 @@
     </div>
 
     <footer>
-        <p>© 2024 智能公厕管理系统 - 让每一次如厕都更加便捷</p>
+        <p>© 2024 智能卫生间 - 让每一次如厕都更加便捷</p>
     </footer>
 </body>
 </html> 
