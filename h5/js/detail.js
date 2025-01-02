@@ -194,12 +194,11 @@ function handleReserve(event, stallId, gender) {
     event.stopPropagation();
     
     const currentUser = localStorage.getItem('currentUser');
-    const currentToilet = JSON.parse(localStorage.getItem('currentToilet'));
-    const stall = currentToilet.stalls[stallId - 1];
     
-    // 检查厕位状态
-    if (stall.state !== 'empty') {
-        showToast('该厕位不可预约', 'error');
+    // 检查积分是否足够
+    const points = parseInt(localStorage.getItem('userPoints') || '0');
+    if (points < 1) {
+        showToast('积分不足，无法预约', 'error');
         return;
     }
     
@@ -208,7 +207,7 @@ function handleReserve(event, stallId, gender) {
     const hasReservation = toiletsData.some(toilet => 
         toilet.stalls.some(stall => 
             stall.reservedBy === currentUser && 
-            stall.state === 'reserved'  // 只检查状态为 reserved 的厕位
+            stall.state === 'reserved'
         )
     );
     
@@ -217,7 +216,14 @@ function handleReserve(event, stallId, gender) {
         return;
     }
     
-    showConfirm(`确认预约${stallId}号${gender}厕所吗？`, () => {
+    showConfirm(`确认预约${stallId}号${gender}厕所吗？将消耗1积分`, () => {
+        const currentToilet = JSON.parse(localStorage.getItem('currentToilet'));
+        const stall = currentToilet.stalls[stallId - 1];
+        
+        // 扣除积分
+        const newPoints = points - 1;
+        localStorage.setItem('userPoints', newPoints);
+
         // 更新厕位状态
         stall.state = 'reserved';
         stall.status = '已预约';

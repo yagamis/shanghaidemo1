@@ -4,127 +4,100 @@ const toilets = [
         id: 1,
         name: '西湖公园公厕',
         address: '杭州市西湖区西湖公园内',
-        distance: '50m',
+        distance: '100m',
         status: '正常',
         rating: 0,
         ratingCount: 0,
         stalls: [
-            { status: '空', gender: '女', state: 'empty', reservedBy: null },      // 1号
-            { status: '空', gender: '女', state: 'empty' },      // 2号
-            { status: '空', gender: '男', state: 'empty' },      // 3号
-            { status: '故障', gender: '男', state: 'fault' },    // 4号
-            { status: '空', gender: '女', state: 'empty' },      // 5号
-            { status: '维修', gender: '男', state: 'maintenance' }, // 6号
-            { status: '空', gender: '女', state: 'empty' },      // 7号
-            { status: '空', gender: '男', state: 'empty' },      // 8号
-            { status: '空', gender: '女', state: 'empty' },      // 9号
-            { status: '空', gender: '男', state: 'empty' },      // 10号
-            { status: '空', gender: '女', state: 'empty' },      // 11号
-            { status: '空', gender: '男', state: 'empty' },      // 12号
-            { status: '空', gender: '女', state: 'empty' },      // 13号
-            { status: '空', gender: '男', state: 'empty' }       // 14号
+            // 女厕位（15个）
+            ...Array(15).fill().map((_, i) => ({ 
+                status: '空', 
+                gender: '女', 
+                state: 'empty', 
+                reservedBy: null 
+            })),
+            // 男厕位（10个）
+            ...Array(10).fill().map((_, i) => ({ 
+                status: '空', 
+                gender: '男', 
+                state: 'empty', 
+                reservedBy: null 
+            }))
         ]
     },
     {
         id: 2,
-        name: '湖滨银泰公厕',
-        address: '杭州市上城区湖滨路与平海路交叉口',
-        distance: '120m',
-        status: '正常',
-        rating: 0,
-        ratingCount: 0,
-        stalls: [
-            { status: '空', gender: '男', state: 'empty' },      // 1号
-            { status: '空', gender: '男', state: 'empty' },      // 2号
-            { status: '空', gender: '男', state: 'empty' },      // 3号
-            { status: '维修', gender: '男', state: 'maintenance' }, // 4号
-            { status: '空', gender: '女', state: 'empty' },      // 5号
-            { status: '空', gender: '女', state: 'empty' },      // 6号
-            { status: '空', gender: '女', state: 'empty' },      // 7号
-            { status: '空', gender: '男', state: 'empty' },      // 8号
-            { status: '空', gender: '女', state: 'empty' },      // 9号
-            { status: '空', gender: '男', state: 'empty' },      // 10号
-            { status: '空', gender: '女', state: 'empty' },      // 11号
-            { status: '空', gender: '男', state: 'empty' }       // 12号
-        ]
-    },
-    {
-        id: 3,
-        name: '黄龙体育中心公厕',
-        address: '杭州市西湖区黄龙路1号',
+        name: '断桥公厕',
+        address: '杭州市西湖区断桥景区附近',
         distance: '300m',
         status: '正常',
         rating: 0,
         ratingCount: 0,
         stalls: [
-            { status: '空', gender: '女', state: 'empty' },      // 1号
-            { status: '空', gender: '女', state: 'empty' },      // 2号
-            { status: '烟雾', gender: '女', state: 'smoke' },    // 3号
-            { status: '空', gender: '女', state: 'empty' },      // 4号
-            { status: '空', gender: '男', state: 'empty' },      // 5号
-            { status: '空', gender: '男', state: 'empty' },      // 6号
-            { status: '维修', gender: '男', state: 'maintenance' }, // 7号
-            { status: '空', gender: '男', state: 'empty' },      // 8号
-            { status: '空', gender: '男', state: 'empty' },      // 9号
-            { status: '空', gender: '男', state: 'empty' },      // 10号
-            { status: '空', gender: '女', state: 'empty' },      // 11号
-            { status: '空', gender: '男', state: 'empty' },      // 12号
-            { status: '空', gender: '女', state: 'empty' },      // 13号
-            { status: '空', gender: '男', state: 'empty' },      // 14号
-            { status: '空', gender: '女', state: 'empty' },      // 15号
-            { status: '空', gender: '男', state: 'empty' }       // 16号
+            // 女厕位（12个）
+            ...Array(12).fill().map((_, i) => ({ 
+                status: '空', 
+                gender: '女', 
+                state: 'empty', 
+                reservedBy: null 
+            })),
+            // 男厕位（8个）
+            ...Array(8).fill().map((_, i) => ({ 
+                status: '空', 
+                gender: '男', 
+                state: 'empty', 
+                reservedBy: null 
+            }))
         ]
     },
     {
-        id: 4,
-        name: '武林广场公厕',
-        address: '杭州市下城区武林广场',
+        id: 3,
+        name: '雷峰塔公厕',
+        address: '杭州市西湖区雷峰塔景区内',
         distance: '500m',
         status: '正常',
         rating: 0,
         ratingCount: 0,
         stalls: [
-            { status: '空', gender: '女', state: 'empty' },      // 1号
-            { status: '空', gender: '女', state: 'empty' },      // 2号
-            { status: '空', gender: '女', state: 'empty' },      // 3号
-            { status: '空', gender: '女', state: 'empty' },      // 4号
-            { status: '故障', gender: '女', state: 'fault' },    // 5号
-            { status: '空', gender: '男', state: 'empty' },      // 6号
-            { status: '空', gender: '男', state: 'empty' },      // 7号
-            { status: '维修', gender: '男', state: 'maintenance' }, // 8号
-            { status: '空', gender: '女', state: 'empty' },      // 9号
-            { status: '空', gender: '男', state: 'empty' },      // 10号
-            { status: '空', gender: '女', state: 'empty' },      // 11号
-            { status: '空', gender: '男', state: 'empty' },      // 12号
-            { status: '空', gender: '女', state: 'empty' },      // 13号
-            { status: '空', gender: '男', state: 'empty' }       // 14号
+            // 女厕位（10个）
+            ...Array(10).fill().map((_, i) => ({ 
+                status: '空', 
+                gender: '女', 
+                state: 'empty', 
+                reservedBy: null 
+            })),
+            // 男厕位（6个）
+            ...Array(6).fill().map((_, i) => ({ 
+                status: '空', 
+                gender: '男', 
+                state: 'empty', 
+                reservedBy: null 
+            }))
         ]
     },
     {
-        id: 5,
-        name: '运河公园公厕',
-        address: '杭州市拱墅区运河公园内',
+        id: 4,
+        name: '苏堤公厕',
+        address: '杭州市西湖区苏堤春晓景点附近',
         distance: '800m',
         status: '正常',
         rating: 0,
         ratingCount: 0,
         stalls: [
-            { status: '空', gender: '男', state: 'empty' },      // 1号
-            { status: '空', gender: '男', state: 'empty' },      // 2号
-            { status: '空', gender: '男', state: 'empty' },      // 3号
-            { status: '空', gender: '男', state: 'empty' },      // 4号
-            { status: '空', gender: '女', state: 'empty' },      // 5号
-            { status: '空', gender: '女', state: 'empty' },      // 6号
-            { status: '空', gender: '女', state: 'empty' },      // 7号
-            { status: '烟雾', gender: '女', state: 'smoke' },    // 8号
-            { status: '维修', gender: '女', state: 'maintenance' }, // 9号
-            { status: '空', gender: '女', state: 'empty' },      // 10号
-            { status: '空', gender: '男', state: 'empty' },      // 11号
-            { status: '空', gender: '女', state: 'empty' },      // 12号
-            { status: '空', gender: '男', state: 'empty' },      // 13号
-            { status: '空', gender: '女', state: 'empty' },      // 14号
-            { status: '空', gender: '男', state: 'empty' },      // 15号
-            { status: '空', gender: '女', state: 'empty' }       // 16号
+            // 女厕位（8个）
+            ...Array(8).fill().map((_, i) => ({ 
+                status: '空', 
+                gender: '女', 
+                state: 'empty', 
+                reservedBy: null 
+            })),
+            // 男厕位（5个）
+            ...Array(5).fill().map((_, i) => ({ 
+                status: '空', 
+                gender: '男', 
+                state: 'empty', 
+                reservedBy: null 
+            }))
         ]
     }
 ];
@@ -171,51 +144,27 @@ function initPage() {
         return;
     }
 
-    const toiletsData = getToiletData();
-    
-    toiletList.innerHTML = toiletsData.map(toilet => {
-        const stats = calculateStats(toilet.stalls);
-        const ratingDisplay = toilet.ratingCount > 0 
-            ? `${toilet.rating.toFixed(1)} <span class="rating-count">(${toilet.ratingCount})</span>`
-            : '暂无评分';
+    // 获取厕所数据
+    let toiletsData = localStorage.getItem('toiletsData');
+    if (!toiletsData) {
+        // 如果没有数据，初始化默认数据
+        toiletsData = DEFAULT_TOILETS;
+        localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
+    } else {
+        toiletsData = JSON.parse(toiletsData);
+    }
 
-        return `
-            <div class="toilet-item" onclick="goToDetail('${encodeURIComponent(toilet.name)}')">
-                <div class="toilet-info">
-                    <h3>
-                        <i class="fas fa-toilet"></i>
-                        ${toilet.name}
-                        <span class="rating">
-                            <i class="fas fa-star"></i>
-                            ${ratingDisplay}
-                        </span>
-                    </h3>
-                    <p class="address">
-                        <i class="fas fa-map-marker-alt"></i>
-                        ${toilet.address}
-                    </p>
-                    <p class="distance">
-                        <i class="fas fa-walking"></i>
-                        ${toilet.distance}
-                    </p>
-                    <div class="stall-stats">
-                        <span class="male-stats">
-                            <i class="fas fa-male"></i>
-                            空位 ${stats.male.empty}/${stats.male.total}
-                        </span>
-                        <span class="female-stats">
-                            <i class="fas fa-female"></i>
-                            空位 ${stats.female.empty}/${stats.female.total}
-                        </span>
-                    </div>
-                </div>
-                <div class="toilet-status ${toilet.status === '正常' ? 'normal' : 'warning'}">
-                    <i class="fas ${toilet.status === '正常' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
-                    ${toilet.status}
-                </div>
-            </div>
-        `;
-    }).join('');
+    // 确保所有厕所数据都有 isTemporary 属性
+    toiletsData = toiletsData.map(toilet => ({
+        ...toilet,
+        isTemporary: toilet.isTemporary || false
+    }));
+
+    // 渲染厕所列表
+    renderToiletList(toiletsData);
+
+    // 添加点击事件监听
+    addToiletClickHandlers();
 }
 
 // 跳转到详情页
@@ -247,6 +196,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
+    // 初始化用户信息显示
+    updateUserProfile();
+    
     // 如果 localStorage 中没有数据，初始化默认数据
     if (!localStorage.getItem('toiletsData')) {
         localStorage.setItem('toiletsData', JSON.stringify(toilets));
@@ -262,12 +214,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// 更新用户信息显示
+function updateUserProfile() {
+    const username = localStorage.getItem('currentUser');
+    const profileUsername = document.getElementById('profileUsername');
+    if (profileUsername && username) {
+        profileUsername.textContent = username;
+    }
+    
+    // 更新积分显示
+    const points = localStorage.getItem('userPoints') || '0';
+    const pointsElement = document.getElementById('userPoints');
+    if (pointsElement) {
+        pointsElement.textContent = points;
+    }
+}
+
 // 退出登录
 function logout() {
     showConfirm('确认退出登录？', () => {
         // 清除登录状态
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('isAdmin');
+        localStorage.removeItem('currentUser');
         // 跳转到登录页
         window.location.href = 'login.html';
     });
@@ -503,4 +472,75 @@ function getStatusText(status) {
         case 'cancelled': return '已取消';
         default: return status;
     }
+}
+
+// 切换标签页
+function switchTab(tabName) {
+    // 保存当前标签页
+    localStorage.setItem('currentTab', tabName);
+    
+    // 隐藏所有页面
+    document.querySelectorAll('.page-container').forEach(page => {
+        page.classList.remove('active');
+    });
+    
+    // 取消所有标签页的激活状态
+    document.querySelectorAll('.tab-item').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // 显示选中的页面
+    document.getElementById(tabName + 'Page').classList.add('active');
+    
+    // 激活对应的标签
+    document.querySelector(`.tab-item[onclick="switchTab('${tabName}')"]`).classList.add('active');
+    
+    // 如果切换到"我的"标签页，更新用户信息
+    if (tabName === 'settings') {
+        updateUserProfile();
+    }
+    
+    // 如果切换到"统计"标签页，初始化统计页面
+    if (tabName === 'stats') {
+        initStatsPage();
+    }
+}
+
+function renderToiletList(toilets) {
+    const toiletList = document.querySelector('.toilet-list');
+    toiletList.innerHTML = toilets.map(toilet => `
+        <div class="toilet-item" 
+             data-toilet-id="${toilet.id}" 
+             data-temporary="${toilet.isTemporary}"
+             onclick="goToDetail('${encodeURIComponent(toilet.name)}')">
+            <div class="toilet-info">
+                <h3>
+                    ${toilet.name}
+                    <span class="rating">
+                        <i class="fas fa-star"></i>
+                        ${toilet.rating.toFixed(1)}
+                    </span>
+                    <span class="rating-count">(${toilet.ratingCount})</span>
+                </h3>
+                <p><i class="fas fa-map-marker-alt"></i>${toilet.address}</p>
+                <p class="distance"><i class="fas fa-walking"></i>${toilet.distance}</p>
+                <div class="stall-stats">
+                    <span class="male-stats">
+                        <i class="fas fa-male"></i>
+                        ${toilet.stalls.filter(s => s.gender === '男').length}个
+                    </span>
+                    <span class="female-stats">
+                        <i class="fas fa-female"></i>
+                        ${toilet.stalls.filter(s => s.gender === '女').length}个
+                    </span>
+                </div>
+            </div>
+            ${toilet.isTemporary ? `
+                <div class="temporary-tag">
+                    <i class="fas fa-clock"></i>
+                    临时厕所
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
 }

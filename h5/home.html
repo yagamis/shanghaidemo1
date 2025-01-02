@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <script src="js/stats.js"></script>
     <script src="js/toast.js"></script>
+    <script src="js/simulation.js"></script>
     <style>
         /* 基础样式 */
         body {
@@ -18,18 +19,18 @@
 
         /* 页面标题 */
         .page-header {
-            padding: 15px 20px;
+            padding: 15px;
             background: white;
-            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             position: relative;
         }
 
         .page-header h1 {
             margin: 0;
             font-size: 18px;
-            color: #333;
-            font-weight: normal;
-            text-align: center;
+            margin-right: auto;  /* 将标题推到左侧 */
         }
 
         /* 列表样式 */
@@ -46,6 +47,13 @@
             justify-content: space-between;
             align-items: flex-start;
             cursor: pointer;
+            position: relative;  /* 为绝对定位的标签提供参考 */
+            transition: background-color 0.3s ease;
+        }
+
+        .toilet-item[data-temporary="true"] {
+            background: #fff8e1;
+            border-left: 4px solid #ff9800;
         }
 
         .toilet-info {
@@ -510,13 +518,965 @@
         #reservationsPage .back-btn:active {
             opacity: 0.7;
         }
+
+        /* 用户信息区域样式 */
+        .user-profile {
+            background: white;
+            padding: 20px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-profile .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-profile .avatar i {
+            font-size: 40px;
+            color: #bdbdbd;
+        }
+
+        .user-profile .user-name {
+            font-size: 18px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-points {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .user-points i {
+            color: #ffc107;
+            margin-right: 5px;
+        }
+
+        /* 模拟按钮包装器 */
+        .simulate-btn-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* 模拟按钮样式 */
+        .simulate-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            height: 36px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .simulate-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .simulate-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .simulate-btn i {
+            font-size: 16px;
+        }
+
+        /* 模拟进度条样式 */
+        .simulation-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: #f5f5f5;
+            display: none;
+        }
+
+        .simulation-progress .bar {
+            height: 100%;
+            width: 0;
+            background: #2196F3;
+            transition: width 0.3s linear;
+        }
+
+        /* 统计数据样式 */
+        .stats-item {
+            background: white;
+            margin: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .toilet-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .stats-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .gender-stats {
+            display: flex;
+            gap: 15px;
+        }
+
+        .male-stats, .female-stats {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .male-stats i {
+            color: #2196F3;
+        }
+
+        .female-stats i {
+            color: #E91E63;
+        }
+
+        .total-stats {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+
+        /* 模拟结果样式 */
+        .simulation-results {
+            background: white;
+            margin: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .results-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .results-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .result-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            background: #f5f5f5;
+        }
+
+        .result-item i {
+            font-size: 24px;
+        }
+
+        .result-item.male i {
+            color: #2196F3;
+        }
+
+        .result-item.female i {
+            color: #E91E63;
+        }
+
+        .result-details {
+            flex: 1;
+        }
+
+        .result-details .label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .result-details .value {
+            font-size: 16px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* 模拟结果分类标题 */
+        .results-content h4 {
+            margin: 15px 0 10px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* 厕所统计项样式 */
+        .toilet-stat-item {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .toilet-stat-item .toilet-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .toilet-stat-item .stats-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        /* 优化建议样式 */
+        .optimization-suggestions {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .suggestion-item {
+            background: #f8f9fa;
+            border-left: 4px solid #2196F3;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .suggestion-item .toilet-name {
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .suggestion-item .suggestion-content {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .peak-hour-suggestion {
+            margin-top: 8px;
+            padding: 8px;
+            background: #fff3e0;
+            border-radius: 4px;
+            color: #e65100;
+        }
+
+        .immediate-suggestion {
+            margin-bottom: 12px;
+            padding: 8px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            color: #1565c0;
+        }
+
+        .long-term-suggestion {
+            margin-top: 12px;
+            padding: 8px;
+            background: #e8f5e9;
+            border-radius: 4px;
+            color: #2e7d32;
+        }
+
+        .alternative-suggestion {
+            margin-top: 12px;
+            padding: 8px;
+            background: #f3e5f5;
+            border-radius: 4px;
+            color: #6a1b9a;
+        }
+
+        .alternative-suggestion strong {
+            color: #4a148c;
+        }
+
+        .suggestion-content strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .simulation-config {
+            background: #fff;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .simulation-config h4 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+
+        .edit-config-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .config-section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .config-section h5 {
+            margin: 0 0 10px 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .config-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 10px;
+        }
+
+        .config-item label {
+            width: 120px;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .config-item input {
+            width: 80px;
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: right;
+        }
+
+        .config-item input:disabled {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .unit {
+            color: #999;
+            font-size: 12px;
+        }
+
+        .config-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .save-config-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .cancel-config-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .peak-hours {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .peak-hour-item {
+            background: white;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .peak-hour-item label {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .peak-hour-item input {
+            width: 70px;
+            height: 28px;
+            padding: 0 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            text-align: right;
+            font-size: 13px;
+        }
+
+        .peak-hour-item .unit {
+            font-size: 12px;
+            color: #999;
+            width: 30px;
+        }
+
+        /* 添加厕所按钮样式 */
+        .add-toilet-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            margin: 8px 0;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .add-toilet-btn:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+
+        .add-toilet-btn:active {
+            transform: translateY(0);
+        }
+
+        .add-toilet-btn:disabled {
+            background: #999 !important;
+            cursor: not-allowed !important;
+            transform: none !important;
+        }
+
+        /* 新增厕所高亮效果 */
+        .toilet-item.new-toilet {
+            background: #fff9c4;
+            animation: highlightNew 1s ease infinite;
+        }
+
+        @keyframes highlightNew {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+            100% { transform: translateX(0); }
+        }
+
+        /* 临时厕所样式 */
+        .toilet-item.temporary-toilet {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+        }
+
+        .temporary-badge {
+            background: #ff9800;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        /* 临时厕所使用统计样式 */
+        .temporary-stats {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #ddd;
+        }
+
+        .temporary-stats-header {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .temporary-toilet-usage {
+            background: #fff3e0;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+
+        .temp-toilet-name {
+            font-size: 12px;
+            color: #ff9800;
+            margin-bottom: 4px;
+        }
+
+        .usage-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+        }
+
+        .usage-stats .male {
+            color: #1976d2;
+        }
+
+        .usage-stats .female {
+            color: #d81b60;
+        }
+
+        /* 配置按钮样式 */
+        .config-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .config-btn:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+        }
+
+        /* 配置面板样式 */
+        .config-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 380px;
+            height: 100vh;
+            background: white;
+            box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-panel.active {
+            right: 0;
+        }
+
+        .config-panel-header {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .config-panel-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .config-panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .config-panel-footer {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .reset-config-btn {
+            background: #9e9e9e;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* 配置面板关闭按钮 */
+        .close-config-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .close-config-btn:hover {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        /* 配置面板底部按钮 */
+        .save-config-btn,
+        .reset-config-btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .save-config-btn {
+            background: #4caf50;
+            color: white;
+        }
+
+        .save-config-btn:hover {
+            background: #45a049;
+        }
+
+        .reset-config-btn {
+            background: #9e9e9e;
+            color: white;
+        }
+
+        .reset-config-btn:hover {
+            background: #757575;
+        }
+
+        /* 跨年模式相关样式 */
+        .new-year-affected {
+            position: relative;
+            background: #fff3e0;
+            border: 1px solid #ffe0b2;
+            border-radius: 4px;
+            padding: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .new-year-affected::after {
+            content: '跨年模式影响';
+            position: absolute;
+            top: -10px;
+            right: 10px;
+            background: #ff9800;
+            color: white;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .new-year-note {
+            font-size: 13px;
+            color: #f57c00;
+            margin: 5px 0;
+            padding: 5px;
+            display: none;
+        }
+
+        .new-year-note.active {
+            display: block;
+        }
+
+        /* 配置面板内容布局优化 */
+        .config-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .config-section h5 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #2196F3;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .config-section h5::before {
+            content: '';
+            width: 4px;
+            height: 14px;
+            background: #2196F3;
+            border-radius: 2px;
+        }
+
+        .config-item {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .config-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .config-item label {
+            font-size: 13px;
+            color: #666;
+            width: auto;
+        }
+
+        .config-item input {
+            width: 70px;
+            height: 28px;
+            padding: 0 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            text-align: right;
+            font-size: 13px;
+        }
+
+        .config-item input:focus {
+            border-color: #2196F3;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+        }
+
+        .config-item .unit {
+            font-size: 12px;
+            color: #999;
+            width: 30px;
+        }
+
+        /* 高峰时段布局优化 */
+        .peak-hours {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .peak-hour-item {
+            background: white;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .peak-hour-item label {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .peak-hour-item input {
+            width: 70px;
+            height: 28px;
+            padding: 0 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            text-align: right;
+            font-size: 13px;
+        }
+
+        .peak-hour-item .unit {
+            font-size: 12px;
+            color: #999;
+            width: 30px;
+        }
+
+        /* 跨年高峰配置项样式 */
+        .midnight-peak {
+            background: #fff1f0;
+            border-color: #ffccc7;
+        }
+
+        .midnight-peak label {
+            color: #cf1322;
+        }
+
+        .midnight-peak input {
+            border-color: #ffccc7;
+        }
+
+        .midnight-peak input:focus {
+            border-color: #ff4d4f;
+            box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.1);
+        }
+
+        .midnight-peak .unit {
+            color: #ff4d4f;
+        }
+
+        /* 跨年模式样式优化 */
+        .special-event {
+            background: #e3f2fd;
+        }
+
+        .new-year-note {
+            background: white;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 8px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .new-year-note i {
+            color: #1976d2;
+            margin-right: 4px;
+        }
+
+        /* 配置面板底部按钮优化 */
+        .config-panel-footer {
+            padding: 12px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+        }
+
+        .config-panel-footer button {
+            height: 32px;
+            font-size: 13px;
+            min-width: 80px;
+        }
+
+        /* 开关样式 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #ff9800;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* 开关禁用状态 */
+        input:disabled + .slider {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 临时厕所标签样式 */
+        .temporary-tag {
+            position: absolute;
+            bottom: 12px;
+            right: 15px;
+            background: #ff9800;
+            color: white;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .temporary-tag i {
+            font-size: 10px;
+        }
+
+        /* 临时厕所列表项样式 */
+        .toilet-item {
+            position: relative;  /* 为绝对定位的标签提供参考 */
+        }
     </style>
 </head>
 <body>
     <!-- 首页内容 -->
     <div id="homePage" class="page-container active">
         <div class="page-header">
-            <h1>附近公厕</h1>
+            <h1>附近公厕（西湖入口）</h1>
         </div>
         <div id="toiletList" class="toilet-list"></div>
     </div>
@@ -527,6 +1487,20 @@
             <h1>我的</h1>
         </div>
         
+        <!-- 用户信息区域 -->
+        <div class="user-profile">
+            <div class="avatar">
+                <i class="fas fa-user-circle"></i>
+            </div>
+            <div class="user-info">
+                <div class="user-name" id="profileUsername"></div>
+                <div class="user-points">
+                    <i class="fas fa-coins"></i>
+                    积分：<span id="userPoints">0</span>
+                </div>
+            </div>
+        </div>
+
         <div class="settings-list">
             <div class="settings-item" onclick="showReservations()">
                 <span>我的预约</span>
@@ -543,13 +1517,151 @@
     <div id="statsPage" class="page-container">
         <div class="page-header">
             <h1>使用统计</h1>
+            <div class="simulate-btn-wrapper">
+                <button class="config-btn" onclick="toggleConfigPanel()" title="模拟配置">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button class="simulate-btn" onclick="startSimulation()" title="开始模拟">
+                    <i class="fas fa-play"></i>
+                    <span>开始模拟</span>
+                </button>
+            </div>
+        </div>
+        <!-- 配置面板 -->
+        <div id="configPanel" class="config-panel">
+            <div class="config-panel-header">
+                <h3>模拟配置</h3>
+                <button class="close-config-btn" onclick="toggleConfigPanel()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="config-panel-content">
+                <div class="config-section special-event">
+                    <h5>特殊活动</h5>
+                    <div class="config-item">
+                        <label>跨年模式：</label>
+                        <label class="switch">
+                            <input type="checkbox" id="newYearMode" onchange="updateNewYearConfig(event)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="new-year-note" id="newYearNote">
+                        <i class="fas fa-info-circle"></i>
+                        开启跨年模式后，游客流量将增加7.5倍，如厕时间延长2.5倍，
+                        并增加22:30-00:30的跨年高峰时段。模拟时间将延长至次日凌晨2:30，
+                        以完整覆盖跨年活动时段。受影响的配置项将自动调整。
+                    </div>
+                </div>
+                <div class="config-section">
+                    <h5>时间设置（毫秒=分钟）</h5>
+                    <div class="config-item" id="dayDurationWrapper">
+                        <label>每天时间长度：</label>
+                        <input type="number" id="dayDuration" value="1440">
+                        <span class="unit">毫秒</span>
+                    </div>
+                    <div class="config-item" id="maleDurationWrapper">
+                        <label>男性如厕时间：</label>
+                        <input type="number" id="maleDuration" value="2">
+                        <span class="unit">毫秒</span>
+                    </div>
+                    <div class="config-item" id="femaleDurationWrapper">
+                        <label>女性如厕时间：</label>
+                        <input type="number" id="femaleDuration" value="6">
+                        <span class="unit">毫秒</span>
+                    </div>
+                    <div class="config-item">
+                        <label>最大等待时间：</label>
+                        <input type="number" id="waitLimit" value="20">
+                        <span class="unit">毫秒</span>
+                    </div>
+                </div>
+                <div class="config-section">
+                    <h5>高峰时段</h5>
+                    <div class="peak-hours">
+                        <div class="peak-hour-item">
+                            <label>上午高峰(9-11点)：</label>
+                            <input type="number" step="0.1" id="peakRatio1" value="2.5">
+                            <span class="unit">倍</span>
+                        </div>
+                        <div class="peak-hour-item">
+                            <label>下午高峰(14-16点)：</label>
+                            <input type="number" step="0.1" id="peakRatio2" value="2.0">
+                            <span class="unit">倍</span>
+                        </div>
+                        <div class="peak-hour-item">
+                            <label>晚间高峰(19-21点)：</label>
+                            <input type="number" step="0.1" id="peakRatio3" value="1.8">
+                            <span class="unit">倍</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="config-section">
+                    <h5>日均游客流量</h5>
+                    <div class="config-item" id="weekdayFlowWrapper">
+                        <label>工作日：</label>
+                        <input type="number" id="weekdayFlow" value="50000">
+                        <span class="unit">人</span>
+                    </div>
+                    <div class="config-item" id="weekendFlowWrapper">
+                        <label>周末：</label>
+                        <input type="number" id="weekendFlow" value="100000">
+                        <span class="unit">人</span>
+                    </div>
+                    <div class="config-item" id="holidayFlowWrapper">
+                        <label>节假日：</label>
+                        <input type="number" id="holidayFlow" value="150000">
+                        <span class="unit">人</span>
+                    </div>
+                </div>
+                <div class="config-section">
+                    <h5>如厕需求比例</h5>
+                    <div class="config-item">
+                        <label>每人每天：</label>
+                        <input type="number" step="0.1" id="usageRatio" value="0.4">
+                        <span class="unit">次</span>
+                    </div>
+                </div>
+            </div>
+            <div class="config-panel-footer">
+                <button class="save-config-btn" onclick="saveConfig()">保存配置</button>
+                <button class="reset-config-btn" onclick="resetConfig()">重置默认值</button>
+            </div>
         </div>
         <div class="stats-container">
-            <div class="filter-bar">
-                <div class="filter-buttons">
-                    <button class="filter-btn active" data-filter="today" onclick="switchFilter(this, 'today')">今日</button>
-                    <button class="filter-btn" data-filter="week" onclick="switchFilter(this, 'week')">本周</button>
-                    <button class="filter-btn" data-filter="month" onclick="switchFilter(this, 'month')">本月</button>
+            <!-- 模拟结果显示区域 -->
+            <div id="simulationResults" class="simulation-results" style="display: none;">
+                <div class="results-header">
+                    <h3>模拟结果</h3>
+                    <button class="close-btn" onclick="hideSimulationResults()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="results-content">
+                    <div class="total-stats">
+                        <h4>总体情况</h4>
+                        <div class="result-item male">
+                            <i class="fas fa-male"></i>
+                            <div class="result-details">
+                                <div class="label">男性未能如厕</div>
+                                <div class="value" id="totalMaleFailRate"></div>
+                            </div>
+                        </div>
+                        <div class="result-item female">
+                            <i class="fas fa-female"></i>
+                            <div class="result-details">
+                                <div class="label">女性未能如厕</div>
+                                <div class="value" id="totalFemaleFailRate"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="toilet-stats">
+                        <h4>各厕所情况</h4>
+                        <div id="toiletSimulationStats"></div>
+                    </div>
+                    <div class="optimization-suggestions">
+                        <h4>优化建议</h4>
+                        <div id="toiletSuggestions"></div>
+                    </div>
                 </div>
             </div>
             <div class="stats-content" id="toiletStats"></div>
@@ -625,6 +1737,9 @@
             const statsPage = document.getElementById('statsPage');
             const tabs = document.querySelectorAll('.tab-item');
             
+            // 获取保存的模拟结果状态
+            const wasSimulationVisible = localStorage.getItem('simulationResultsVisible') === 'true';
+            
             // 切换页面显示
             if (tab === 'home') {
                 homePage.classList.add('active');
@@ -643,6 +1758,10 @@
                 tabs[2].classList.remove('active');
                 document.title = '使用统计';
                 updateToiletStats(); // 切换到统计页面时更新数据
+                // 恢复模拟结果显示状态
+                if (wasSimulationVisible) {
+                    document.getElementById('simulationResults').style.display = 'block';
+                }
             } else if (tab === 'settings') {
                 homePage.classList.remove('active');
                 settingsPage.classList.add('active');
@@ -759,6 +1878,12 @@
                         </div>
                     </div>
                 `).join('') || '<div class="no-data">暂无统计数据</div>';
+        }
+
+        // 在关闭模拟结果时也要更新状态
+        function hideSimulationResults() {
+            document.getElementById('simulationResults').style.display = 'none';
+            localStorage.removeItem('simulationResultsVisible');
         }
     </script>
 

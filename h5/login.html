@@ -232,14 +232,22 @@
                 if (username === 'admin' && password === 'admin') {
                     localStorage.setItem('isLoggedIn', 'true');
                     localStorage.setItem('isAdmin', 'true');
-                    showToast('登录成功', 'success');
+                    localStorage.setItem('currentUser', username);
+                    let points = parseInt(localStorage.getItem('userPoints') || '0');
+                    points += 5;  // 登录奖励5积分
+                    localStorage.setItem('userPoints', points);
+                    showToast('登录成功，获得5积分奖励！', 'success');
                     setTimeout(() => {
                         window.location.href = 'home.html';
                     }, 1000);
                 } else if (username === 'user1' && password === 'user1') {
                     localStorage.setItem('isLoggedIn', 'true');
                     localStorage.setItem('isAdmin', 'false');
-                    showToast('登录成功', 'success');
+                    localStorage.setItem('currentUser', username);
+                    let points = parseInt(localStorage.getItem('userPoints') || '0');
+                    points += 5;  // 登录奖励5积分
+                    localStorage.setItem('userPoints', points);
+                    showToast('登录成功，获得5积分奖励！', 'success');
                     setTimeout(() => {
                         window.location.href = 'home.html';
                     }, 1000);
@@ -248,7 +256,7 @@
                     btn.classList.remove('loading');
                     btn.disabled = false;
                 }
-            }, 800); // 添加一个小延迟使加载动画更明显
+            }, 800);
         }
     </script>
 </body>

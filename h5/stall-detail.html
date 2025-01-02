@@ -500,6 +500,39 @@
             flex: 1;  /* 呼叫帮助按钮占较少空间 */
             justify-content: center;
         }
+
+        /* AI 助手悬浮图标样式 */
+        .ai-assistant {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            width: 50px;
+            height: 50px;
+            background: #2196F3;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .ai-assistant i {
+            color: white;
+            font-size: 24px;
+        }
+
+        .ai-assistant:hover {
+            transform: scale(1.1);
+            background: #1976D2;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .ai-assistant:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
@@ -623,6 +656,14 @@
         <i class="fas fa-plus"></i>
     </button> -->
 
+    <!-- 添加 Toast 容器 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- AI 助手悬浮图标 -->
+    <div class="ai-assistant" onclick="openAIChat()">
+        <i class="fas fa-robot"></i>
+    </div>
+
     <!-- 将脚本移到 body 末尾 -->
     <script src="js/stall-detail.js"></script>
     <script>
@@ -637,6 +678,11 @@
                 }
             }, 1000);
         });
+
+        function openAIChat() {
+            // 在新浏览器窗口打开
+            window.open('https://share.fastgpt.in/chat/share?shareId=xty1tqmrmg9qm6wbmfqscc2e', '_blank');
+        }
     </script>
 </body>
 </html> 
