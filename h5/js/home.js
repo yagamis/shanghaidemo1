@@ -162,9 +162,6 @@ function initPage() {
 
     // 渲染厕所列表
     renderToiletList(toiletsData);
-
-    // 添加点击事件监听
-    addToiletClickHandlers();
 }
 
 // 跳转到详情页

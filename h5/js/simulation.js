@@ -56,6 +56,88 @@ const SIMULATION_CONFIG = {
 // 批量处理的记录数
 const BATCH_SIZE = 100;
 
+// 模拟结果管理器
+const SimulationManager = {
+    results: null,  // 当前模拟结果
+    isSimulating: false,  // 模拟状态
+    
+    // 内存中的临时数据
+    memoryData: {
+        toilets: [],      // 厕所数据副本
+        records: [],      // 使用记录
+        stats: {          // 统计数据
+            male: { total: 0, failed: 0 },
+            female: { total: 0, failed: 0 },
+            toilets: {}
+        }
+    },
+    
+    // 初始化模拟
+    async init() {
+        // 清理旧的模拟历史
+        try {
+            localStorage.removeItem('simulationHistory');
+        } catch (e) {
+            console.warn('Failed to clear simulation history:', e);
+        }
+
+        // 从localStorage获取厕所数据的副本
+        const toiletsData = JSON.parse(localStorage.getItem('toiletsData') || '[]');
+        this.memoryData.toilets = JSON.parse(JSON.stringify(toiletsData));
+        this.memoryData.records = [];
+        this.resetStats();
+    },
+    
+    // 重置统计数据
+    resetStats() {
+        this.memoryData.stats = {
+            male: { total: 0, failed: 0 },
+            female: { total: 0, failed: 0 },
+            toilets: {}
+        };
+    },
+    
+    // 保存模拟结果
+    saveResults() {
+        const results = {
+            timestamp: Date.now(),
+            stats: this.memoryData.stats,
+            config: { ...SIMULATION_CONFIG }
+        };
+        
+        // 只保存最新的模拟结果
+        try {
+            localStorage.setItem('simulationHistory', JSON.stringify([results]));
+        } catch (e) {
+            console.warn('Failed to save simulation history:', e);
+            // 如果存储失败，尝试只保存关键数据
+            const simplifiedResults = {
+                timestamp: results.timestamp,
+                stats: {
+                    male: results.stats.male,
+                    female: results.stats.female,
+                    toilets: Object.fromEntries(
+                        Object.entries(results.stats.toilets).map(([name, data]) => [
+                            name,
+                            {
+                                male: data.male,
+                                female: data.female,
+                                stalls: {
+                                    male: data.male.stalls,
+                                    female: data.female.stalls
+                                }
+                            }
+                        ])
+                    )
+                }
+            };
+            localStorage.setItem('simulationHistory', JSON.stringify([simplifiedResults]));
+        }
+        
+        return results;
+    }
+};
+
 // 模拟状态
 let simulationStats = {
     male: { total: 0, failed: 0 },
@@ -118,14 +200,14 @@ function estimateVisitorFlow(toiletName) {
 
 // 模拟单个厕所的使用
 async function simulateToilet(toilet, startTime) {
-    // 获取相关的临时厕所
-    const toiletsData = JSON.parse(localStorage.getItem('toiletsData'));
+    // 从内存中获取临时厕所数据
+    const toiletsData = SimulationManager.memoryData.toilets;
     const temporaryToilets = toiletsData.filter(t => 
         t.isTemporary && t.parentToilet === toilet.name
     );
 
     // 初始化该厕所的统计数据
-    simulationStats.toilets[toilet.name] = {
+    SimulationManager.memoryData.stats.toilets[toilet.name] = {
         male: { total: 0, failed: 0, stalls: 0 },
         female: { total: 0, failed: 0, stalls: 0 },
         records: []
@@ -155,9 +237,9 @@ async function simulateToilet(toilet, startTime) {
     // 统计男女厕位数量
     stallsStatus.forEach(stall => {
         if (stall.gender === '男') {
-            simulationStats.toilets[toilet.name].male.stalls++;
+            SimulationManager.memoryData.stats.toilets[toilet.name].male.stalls++;
         } else if (stall.gender === '女') {
-            simulationStats.toilets[toilet.name].female.stalls++;
+            SimulationManager.memoryData.stats.toilets[toilet.name].female.stalls++;
         }
     });
 
@@ -196,7 +278,7 @@ async function simulateToilet(toilet, startTime) {
             stall.busyUntil = user.time + duration;
 
             // 记录使用
-            simulationStats.toilets[toilet.name].records.push({
+            SimulationManager.memoryData.stats.toilets[toilet.name].records.push({
                 gender: user.gender,
                 time: user.time,
                 failed: false,
@@ -214,8 +296,9 @@ async function simulateToilet(toilet, startTime) {
             });
 
             // 当缓存达到一定大小时批量保存
-            if (recordsCache[toilet.name].length >= BATCH_SIZE) {
-                await batchSaveRecords(toilet.name);
+            if (SimulationManager.memoryData.records.length >= BATCH_SIZE) {
+                // 仅在内存中累积记录，不写入存储
+                SimulationManager.memoryData.records = [];
             }
         } else {
             // 没有空闲厕位
@@ -226,14 +309,14 @@ async function simulateToilet(toilet, startTime) {
                     .map(s => s.busyUntil - user.time));
                 
                 if (minWaitTime > SIMULATION_CONFIG.FEMALE_WAIT_LIMIT) {
-                    simulationStats.female.failed++;
-                    simulationStats.toilets[toilet.name].female.failed++;
+                    SimulationManager.memoryData.stats.female.failed++;
+                    SimulationManager.memoryData.stats.toilets[toilet.name].female.failed++;
                 }
             }
-            simulationStats[user.gender === '男' ? 'male' : 'female'].failed++;
-            simulationStats.toilets[toilet.name][user.gender === '男' ? 'male' : 'female'].failed++;
+            SimulationManager.memoryData.stats[user.gender === '男' ? 'male' : 'female'].failed++;
+            SimulationManager.memoryData.stats.toilets[toilet.name][user.gender === '男' ? 'male' : 'female'].failed++;
             // 记录失败的尝试
-            simulationStats.toilets[toilet.name].records.push({
+            SimulationManager.memoryData.stats.toilets[toilet.name].records.push({
                 gender: user.gender,
                 time: user.time,
                 failed: true,
@@ -244,15 +327,15 @@ async function simulateToilet(toilet, startTime) {
 
     // 保存剩余的记录
     if (recordsCache[toilet.name].length > 0) {
-        await batchSaveRecords(toilet.name);
+        // 仅在内存中累积记录，不写入存储
+        SimulationManager.memoryData.records = [];
     }
 }
 
 // 生成用户到达时间
 function generateArrivals(gender, interval, startTime, toiletName) {
     const arrivals = [];
-    let currentTime = startTime;
-    const toilet = JSON.parse(localStorage.getItem('toiletsData'))
+    const toilet = SimulationManager.memoryData.toilets
         .find(t => t.name === toiletName);
     
     // 计算24小时的总权重
@@ -262,7 +345,7 @@ function generateArrivals(gender, interval, startTime, toiletName) {
     }).reduce((sum, ratio) => sum + ratio, 0);
     
     // 计算该性别的总用户数
-    const totalUsers = Math.round(toilet.usersPerDay / 2); // 男女各半
+    const totalUsers = Math.round(toilet.usersPerDay * (gender === '男' ? 0.45 : 0.55)); // 男女比例调整为45:55
     let remainingUsers = totalUsers;
     
     // 按小时生成用户
@@ -273,7 +356,7 @@ function generateArrivals(gender, interval, startTime, toiletName) {
         
         // 计算这个小时的用户数
         const ratio = getTimeRatio(hourStart);
-        const hourUsers = Math.round(totalUsers * (ratio / totalWeight));
+        const hourUsers = Math.round((totalUsers / 24) * ratio); // 更准确的小时用户分配
         
         // 在这个小时内随机生成用户到达时间
         for (let i = 0; i < hourUsers && remainingUsers > 0; i++) {
@@ -283,8 +366,8 @@ function generateArrivals(gender, interval, startTime, toiletName) {
                 isPeakHour: ratio > 1
             });
             remainingUsers--;
-            simulationStats[gender === '男' ? 'male' : 'female'].total++;
-            simulationStats.toilets[toiletName][gender === '男' ? 'male' : 'female'].total++;
+            SimulationManager.memoryData.stats[gender === '男' ? 'male' : 'female'].total++;
+            SimulationManager.memoryData.stats.toilets[toiletName][gender === '男' ? 'male' : 'female'].total++;
         }
     }
     return arrivals.sort((a, b) => a.time - b.time);
@@ -308,69 +391,55 @@ async function batchSaveRecords(toiletName) {
 
 // 开始模拟
 async function startSimulation() {
-    // 清除之前的统计数据
-    localStorage.removeItem('unlockStats');
-
-    // 重置统计
-    simulationStats = {
-        male: { total: 0, failed: 0 },
-        female: { total: 0, failed: 0 },
-        toilets: {}
-    };
-
-    // 重置缓存
-    recordsCache = {};
-
-    const toilets = JSON.parse(localStorage.getItem('toiletsData'));
+    if (SimulationManager.isSimulating) {
+        showToast('模拟正在进行中，请稍候', 'info');
+        return;
+    }
 
     try {
-        // 获取每个厕所的预计使用人数
-        for (const toilet of toilets) {
+        SimulationManager.isSimulating = true;
+        
+        // 禁用开始按钮
+        const startBtn = document.querySelector('.simulate-btn');
+        startBtn.disabled = true;
+        startBtn.style.opacity = '0.7';
+
+        // 初始化模拟环境
+        await SimulationManager.init();
+
+        // 获取所有厕所数据
+        const toiletsData = SimulationManager.memoryData.toilets;
+
+        // 计算每个厕所的预计使用人数
+        toiletsData.forEach(toilet => {
             const visitorCount = estimateVisitorFlow(toilet.name);
-            if (visitorCount) {
-                // 更新配置中的用户数量
-                toilet.usersPerDay = visitorCount;
-            } else {
-                // 如果无法获取数据，使用默认值
-                toilet.usersPerDay = 2000; // 默认每天2000人
-            }
-            console.log(`${toilet.name} 预计用户数: ${toilet.usersPerDay}`);
-        }
+            toilet.usersPerDay = visitorCount;
+            console.log(`${toilet.name} 预计用户数: ${visitorCount}`);
+        });
 
-        // 保存更新后的数据
-        localStorage.setItem('toiletsData', JSON.stringify(toilets));
+        // 设置模拟开始时间
+        const startTime = new Date().setHours(0, 0, 0, 0);
 
-        // 显示进度条
-        const progress = document.createElement('div');
-        progress.className = 'simulation-progress';
-        progress.innerHTML = '<div class="bar"></div>';
-        document.body.appendChild(progress);
-        progress.style.display = 'block';
+        // 并行模拟所有厕所
+        await Promise.all(toiletsData.map(toilet => 
+            simulateToilet(toilet, startTime)
+        ));
 
-        const startTime = Date.now();
+        // 保存模拟结果
+        const results = SimulationManager.saveResults();
 
-        try {
-            // 同时模拟所有厕所
-            await Promise.all(toilets.map(toilet => simulateToilet(toilet, startTime)));
+        // 显示模拟结果
+        showSimulationResults(results.stats);
 
-            // 更新进度条
-            const bar = progress.querySelector('.bar');
-            bar.style.width = '100%';
-
-            // 显示结果
-            setTimeout(() => {
-                progress.remove();
-                showSimulationResults();
-                // 刷新统计数据
-                updateStats('today');
-            }, 300);
-        } catch (error) {
-            console.error('模拟过程出错:', error);
-            alert('模拟过程出现错误，请重试');
-            progress.remove();
-        }
     } catch (error) {
-        console.warn('计算游客流量出错，使用默认值');
+        console.error('Simulation failed:', error);
+        showToast('模拟执行失败，请重试', 'error');
+    } finally {
+        // 恢复开始按钮状态
+        const startBtn = document.querySelector('.simulate-btn');
+        startBtn.disabled = false;
+        startBtn.style.opacity = '1';
+        SimulationManager.isSimulating = false;
     }
 }
 
@@ -657,18 +726,43 @@ function calculateOptimizations(stats) {
 }
 
 // 显示模拟结果
-function showSimulationResults() {
-    const maleFailRate = Math.round(simulationStats.male.failed / simulationStats.male.total * 100);
-    const femaleFailRate = Math.round(simulationStats.female.failed / simulationStats.female.total * 100);
+function showSimulationResults(stats) {
+    const maleFailRate = Math.round(stats.male.failed / stats.male.total * 100);
+    const femaleFailRate = Math.round(stats.female.failed / stats.female.total * 100);
 
     // 更新总体结果显示
     document.getElementById('totalMaleFailRate').textContent = 
-        `${simulationStats.male.failed}/${simulationStats.male.total} (${maleFailRate}%)`;
+        `${stats.male.failed}/${stats.male.total} (${maleFailRate}%)`;
     document.getElementById('totalFemaleFailRate').textContent = 
-        `${simulationStats.female.failed}/${simulationStats.female.total} (${femaleFailRate}%)`;
+        `${stats.female.failed}/${stats.female.total} (${femaleFailRate}%)`;
+
+    // 如果是跨年模式，显示特别建议
+    if (SIMULATION_CONFIG.NEW_YEAR_EVENT.enabled) {
+        const specialSuggestionsHtml = `
+            <div class="new-year-suggestions">
+                <h4>🎆 跨年活动特别建议</h4>
+                <div class="suggestions-grid">
+                    ${SIMULATION_CONFIG.NEW_YEAR_EVENT.specialSuggestions.map(suggestion => `
+                        <div class="suggestion-card">
+                            <div class="suggestion-content">
+                                <i class="fas fa-lightbulb"></i>
+                                <span>${suggestion}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        
+        // 在厕所建议之前插入跨年特别建议
+        const suggestionsContainer = document.getElementById('toiletSuggestions');
+        if (suggestionsContainer) {
+            suggestionsContainer.insertAdjacentHTML('afterbegin', specialSuggestionsHtml);
+        }
+    }
 
     // 更新各厕所结果显示
-    const toiletStatsHtml = Object.entries(simulationStats.toilets).map(([toiletName, stats]) => {
+    const toiletStatsHtml = Object.entries(stats.toilets).map(([toiletName, stats]) => {
         // 避免除以0的情况
         const maleRate = stats.male.total > 0 ? 
             Math.round(stats.male.failed / stats.male.total * 100) : 0;
@@ -721,7 +815,7 @@ function showSimulationResults() {
     document.getElementById('toiletSimulationStats').innerHTML = toiletStatsHtml;
 
     // 计算并显示优化建议
-    const suggestions = calculateOptimizations(simulationStats);
+    const suggestions = calculateOptimizations(stats);
     const suggestionsHtml = suggestions.map(suggestion => {
         const toiletName = suggestion.toiletName;
         return `
@@ -765,6 +859,56 @@ function showSimulationResults() {
 
     // 显示结果区域
     document.getElementById('simulationResults').style.display = 'block';
+
+    // 添加相应的样式
+    const style = document.createElement('style');
+    style.textContent = `
+        .new-year-suggestions {
+            background: #fff8e1;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #ffe082;
+        }
+
+        .new-year-suggestions h4 {
+            color: #f57c00;
+            margin: 0 0 16px 0;
+            font-size: 16px;
+        }
+
+        .suggestions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+
+        .suggestion-card {
+            background: white;
+            border-radius: 6px;
+            padding: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .suggestion-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            flex-direction:column;
+        }
+
+        .suggestion-content i {
+            color: #ffa000;
+            margin-top: 3px;
+        }
+
+        .suggestion-content span {
+            font-size: 14px;
+            line-height: 1.4;
+            color: #424242;
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 // 隐藏模拟结果
@@ -1168,6 +1312,33 @@ function updateNewYearConfig(event) {
     const isNewYearMode = event.target.checked;
     SIMULATION_CONFIG.NEW_YEAR_EVENT.enabled = isNewYearMode;
   
+    // 保存跨年模式状态到本地存储
+    try {
+        localStorage.setItem('newYearMode', JSON.stringify({
+            enabled: isNewYearMode,
+            config: {
+                dayDuration: isNewYearMode ? 1590 : SIMULATION_CONFIG.DAY_DURATION,
+                maleDuration: isNewYearMode ? 
+                    Math.round(SIMULATION_CONFIG.MALE_DURATION * SIMULATION_CONFIG.NEW_YEAR_EVENT.durationMultiplier) : 
+                    SIMULATION_CONFIG.MALE_DURATION,
+                femaleDuration: isNewYearMode ? 
+                    Math.round(SIMULATION_CONFIG.FEMALE_DURATION * SIMULATION_CONFIG.NEW_YEAR_EVENT.durationMultiplier) : 
+                    SIMULATION_CONFIG.FEMALE_DURATION,
+                weekdayFlow: isNewYearMode ? 
+                    Math.round(SIMULATION_CONFIG.DAILY_VISITORS.WEEKDAY * SIMULATION_CONFIG.NEW_YEAR_EVENT.visitorMultiplier) : 
+                    SIMULATION_CONFIG.DAILY_VISITORS.WEEKDAY,
+                weekendFlow: isNewYearMode ? 
+                    Math.round(SIMULATION_CONFIG.DAILY_VISITORS.WEEKEND * SIMULATION_CONFIG.NEW_YEAR_EVENT.visitorMultiplier) : 
+                    SIMULATION_CONFIG.DAILY_VISITORS.WEEKEND,
+                holidayFlow: isNewYearMode ? 
+                    Math.round(SIMULATION_CONFIG.DAILY_VISITORS.HOLIDAY * SIMULATION_CONFIG.NEW_YEAR_EVENT.visitorMultiplier) : 
+                    SIMULATION_CONFIG.DAILY_VISITORS.HOLIDAY
+            }
+        }));
+    } catch (e) {
+        console.warn('Failed to save new year mode state:', e);
+    }
+  
     // 获取高峰时段容器
     const peakHoursContainer = document.querySelector('.peak-hours');
   
@@ -1262,8 +1433,32 @@ function updateNewYearConfig(event) {
             showToast('已移除跨年临时厕所设施', 'info');
         }
   
-        // 恢复每天时间长度
-        document.getElementById('dayDuration').value = 1440;
-        document.getElementById('dayDuration').disabled = false;
+        // 调用重置配置函数
+        resetConfig();
+  
+        // 启用所有输入框
+        document.querySelectorAll('.simulation-config input').forEach(input => {
+            input.disabled = false;
+        });
     }
-} 
+}
+
+// 页面加载时恢复跨年模式状态
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const savedNewYearMode = localStorage.getItem('newYearMode');
+        if (savedNewYearMode) {
+            const { enabled, config } = JSON.parse(savedNewYearMode);
+            
+            // 恢复跨年模式开关状态
+            const newYearModeCheckbox = document.getElementById('newYearMode');
+            if (newYearModeCheckbox) {
+                newYearModeCheckbox.checked = enabled;
+                // 触发配置更新
+                newYearModeCheckbox.dispatchEvent(new Event('change'));
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to restore new year mode state:', e);
+    }
+}); 
