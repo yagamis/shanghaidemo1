@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0 0 24 24">
-  <defs>
-    <linearGradient id="errorGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FF5252"/>
-      <stop offset="100%" style="stop-color:#F44336"/>
-    </linearGradient>
-  </defs>
-  <path fill="url(#errorGradient)" d="M16,11H18V13H16V11M12,3H19C20.11,3 21,3.89 21,5V19H22V21H2V19H3V5C3,3.89 3.89,3 5,3H12M12,5V19H5V5H12M19,5H14V19H19V5Z"/>
-</svg> 
