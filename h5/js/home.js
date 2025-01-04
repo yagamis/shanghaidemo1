@@ -162,6 +162,9 @@ function initPage() {
 
     // 渲染厕所列表
     renderToiletList(toiletsData);
+
+    // 更新移除按钮状态
+    updateRemoveButton();
 }
 
 // 跳转到详情页
@@ -541,3 +544,43 @@ function renderToiletList(toilets) {
         </div>
     `).join('');
 }
+
+// 检查并显示/隐藏移除临时厕所按钮
+function updateRemoveButton() {
+    const toiletsData = JSON.parse(localStorage.getItem('toiletsData') || '[]');
+    const hasTemporary = toiletsData.some(t => t.isTemporary);
+    const removeBtn = document.getElementById('removeTemporaryBtn');
+    
+    if (removeBtn) {
+        removeBtn.style.display = hasTemporary ? 'block' : 'none';
+    }
+}
+
+// 移除所有临时厕所
+function removeAllTemporaryToilets() {
+    showConfirm('确定要移除所有临时厕所吗？', () => {
+        try {
+            let toiletsData = JSON.parse(localStorage.getItem('toiletsData'));
+            const originalToilets = toiletsData.filter(t => !t.isTemporary);
+            
+            if (toiletsData.length !== originalToilets.length) {
+                localStorage.setItem('toiletsData', JSON.stringify(originalToilets));
+                
+                // 刷新列表
+                initPage();
+                
+                // 更新按钮状态
+                updateRemoveButton();
+                
+                // 显示提示
+                showToast('已移除所有临时厕所', 'success');
+            }
+        } catch (error) {
+            console.error('移除临时厕所失败:', error);
+            showToast('移除临时厕所失败，请重试', 'error');
+        }
+    });
+}
+
+// 确保函数在全局作用域可用
+window.removeAllTemporaryToilets = removeAllTemporaryToilets;

@@ -95,6 +95,8 @@ const SimulationManager = {
             female: { total: 0, failed: 0 },
             toilets: {}
         };
+        // 清空缓存
+        recordsCache = {};
     },
     
     // 保存模拟结果
@@ -179,22 +181,44 @@ function estimateVisitorFlow(toiletName) {
         SIMULATION_CONFIG.DAILY_VISITORS.WEEKEND : 
         SIMULATION_CONFIG.DAILY_VISITORS.WEEKDAY;
     
+    // 计算如厕需求总人数
+    let totalToiletUsers = baseFlow * SIMULATION_CONFIG.TOILET_USAGE_RATIO;
+    
     // 如果是跨年模式，增加游客量
     if (SIMULATION_CONFIG.NEW_YEAR_EVENT.enabled) {
-        baseFlow *= SIMULATION_CONFIG.NEW_YEAR_EVENT.visitorMultiplier;
+        totalToiletUsers *= SIMULATION_CONFIG.NEW_YEAR_EVENT.visitorMultiplier;
     }
     
-    // 获取该厕所的区域分布比例
-    const areaRatio = SIMULATION_CONFIG.AREA_DISTRIBUTION[toiletName] || 
-        SIMULATION_CONFIG.AREA_DISTRIBUTION['其他公厕'];
+    // 获取所有厕所（包括临时厕所）
+    const toiletsData = JSON.parse(localStorage.getItem('toiletsData') || '[]');
     
-    // 计算该厕所的预计使用人数
-    const estimatedUsers = Math.round(
-        baseFlow * 
-        areaRatio * 
-        SIMULATION_CONFIG.TOILET_USAGE_RATIO
-    );
+    // 计算所有厕所的总数（包括临时厕所）
+    const totalToilets = toiletsData.length;
     
+    // 获取当前厕所
+    const currentToilet = toiletsData.find(t => t.name === toiletName);
+    if (!currentToilet) return 0;
+    
+    // 计算当前厕所的厕位比例
+    const totalStalls = toiletsData.reduce((sum, t) => sum + t.stalls.length, 0);
+    const currentStalls = currentToilet.stalls.length;
+    const stallRatio = currentStalls / totalStalls;
+    
+    // 计算该厕所的预计使用人数（基于厕位比例）
+    const estimatedUsers = Math.round(totalToiletUsers * stallRatio);
+    
+    // 输出调试信息
+    console.log(`${toiletName} 预估数据:`, {
+        baseFlow,
+        totalToiletUsers,
+        totalStalls,
+        currentStalls,
+        stallRatio,
+        estimatedUsers,
+        isNewYearMode: SIMULATION_CONFIG.NEW_YEAR_EVENT.enabled,
+        isTemporary: currentToilet.isTemporary
+    });
+
     return estimatedUsers;
 }
 
@@ -330,6 +354,12 @@ async function simulateToilet(toilet, startTime) {
         // 仅在内存中累积记录，不写入存储
         SimulationManager.memoryData.records = [];
     }
+
+    // 更新总人数统计
+    SimulationManager.memoryData.stats.male.total += maleArrivals.length;
+    SimulationManager.memoryData.stats.female.total += femaleArrivals.length;
+    SimulationManager.memoryData.stats.toilets[toilet.name].male.total += maleArrivals.length;
+    SimulationManager.memoryData.stats.toilets[toilet.name].female.total += femaleArrivals.length;
 }
 
 // 生成用户到达时间
@@ -338,25 +368,30 @@ function generateArrivals(gender, interval, startTime, toiletName) {
     const toilet = SimulationManager.memoryData.toilets
         .find(t => t.name === toiletName);
     
-    // 计算24小时的总权重
-    const totalWeight = Array.from({length: 24}, (_, hour) => {
-        const peak = SIMULATION_CONFIG.PEAK_HOURS.find(p => hour >= p.start && hour < p.end);
-        return peak ? peak.ratio : 1;
-    }).reduce((sum, ratio) => sum + ratio, 0);
+    // 获取该厕所的预计使用人数
+    const estimatedUsers = estimateVisitorFlow(toiletName);
     
     // 计算该性别的总用户数
-    const totalUsers = Math.round(toilet.usersPerDay * (gender === '男' ? 0.45 : 0.55)); // 男女比例调整为45:55
+    const totalUsers = Math.round(estimatedUsers * (gender === '男' ? 0.45 : 0.55)); // 男女比例调整为45:55
     let remainingUsers = totalUsers;
     
+    // 计算24小时的基础分布
+    const hourlyDistribution = Array.from({length: 24}, (_, hour) => {
+        const ratio = getTimeRatio(new Date(startTime).setHours(hour, 0, 0, 0));
+        return { hour, ratio };
+    });
+
+    // 计算总权重
+    const totalWeight = hourlyDistribution.reduce((sum, { ratio }) => sum + ratio, 0);
+
     // 按小时生成用户
-    for (let hour = 0; hour < 24; hour++) {
+    hourlyDistribution.forEach(({ hour, ratio }) => {
         const hourStart = new Date(startTime);
         hourStart.setHours(hour, 0, 0, 0);
         const hourDuration = SIMULATION_CONFIG.DAY_DURATION / 24;
         
         // 计算这个小时的用户数
-        const ratio = getTimeRatio(hourStart);
-        const hourUsers = Math.round((totalUsers / 24) * ratio); // 更准确的小时用户分配
+        const hourUsers = Math.round(totalUsers * (ratio / totalWeight));
         
         // 在这个小时内随机生成用户到达时间
         for (let i = 0; i < hourUsers && remainingUsers > 0; i++) {
@@ -366,10 +401,14 @@ function generateArrivals(gender, interval, startTime, toiletName) {
                 isPeakHour: ratio > 1
             });
             remainingUsers--;
-            SimulationManager.memoryData.stats[gender === '男' ? 'male' : 'female'].total++;
-            SimulationManager.memoryData.stats.toilets[toiletName][gender === '男' ? 'male' : 'female'].total++;
         }
+    });
+
+    // 确保总人数不超过预期
+    if (arrivals.length > totalUsers) {
+        arrivals.length = totalUsers;
     }
+
     return arrivals.sort((a, b) => a.time - b.time);
 }
 
@@ -524,205 +563,105 @@ const TEMPORARY_LOCATIONS = {
 function calculateOptimizations(stats) {
     const suggestions = [];
     
+    // 附近商家信息映射
+    const nearbyFacilities = {
+        '西湖公园公厕': [
+            { name: '星巴克西湖店', distance: '100米', type: '咖啡店' },
+            { name: '西湖天地商场', distance: '150米', type: '商场' },
+            { name: '西湖银泰城', distance: '300米', type: '商场' }
+        ],
+        '断桥公厕': [
+            { name: '平海路沃尔玛', distance: '200米', type: '超市' },
+            { name: '新华书店', distance: '150米', type: '书店' }
+        ],
+        '雷峰塔公厕': [
+            { name: '南山商业街', distance: '180米', type: '商业街' },
+            { name: '雷峰塔游客中心', distance: '50米', type: '游客中心' }
+        ],
+        '苏堤公厕': [
+            { name: '花港观鱼餐厅', distance: '150米', type: '餐厅' },
+            { name: '曲院风荷游客服务处', distance: '200米', type: '服务处' }
+        ]
+    };
+
     Object.entries(stats.toilets).forEach(([toiletName, toiletStats]) => {
-        // 获取所有相关的临时厕所
-        const toiletsData = JSON.parse(localStorage.getItem('toiletsData'));
-        const relatedTemporaryToilets = toiletsData.filter(t => 
-            t.isTemporary && t.parentToilet === toiletName
-        );
-
-        // 计算包含临时厕所在内的总厕位数
-        const totalStalls = {
-            male: toiletStats.male.stalls + 
-                relatedTemporaryToilets.reduce((sum, t) => 
-                    sum + t.stalls.filter(s => s.gender === '男').length, 0),
-            female: toiletStats.female.stalls + 
-                relatedTemporaryToilets.reduce((sum, t) => 
-                    sum + t.stalls.filter(s => s.gender === '女').length, 0)
-        };
-
-        const maleStalls = toiletStats.male.stalls;
-        const femaleStalls = toiletStats.female.stalls;
-        
-        // 计算男女使用情况
-        const femaleFailRate = toiletStats.female.total > 0 ? 
-            toiletStats.female.failed / toiletStats.female.total : 0;
-        const maleFailRate = toiletStats.male.total > 0 ? 
-            toiletStats.male.failed / toiletStats.male.total : 0;
-        
-        // 计算男女使用压力
-        const femalePressure = toiletStats.female.total * SIMULATION_CONFIG.FEMALE_DURATION;
-        const malePressure = toiletStats.male.total * SIMULATION_CONFIG.MALE_DURATION;
-        
-        // 计算理想的男女厕位比例
-        const totalPressure = femalePressure + malePressure;
-        const idealFemaleRatio = femalePressure / totalPressure;
-        const idealMaleRatio = malePressure / totalPressure;
-        
-        // 计算男女厕位使用效率
-        const femaleStallUsage = toiletStats.female.total / totalStalls.female;
-        const maleStallUsage = toiletStats.male.total / totalStalls.male;
-
-        let suggestion = {
+        const suggestion = {
             toiletName,
-            needsOptimization: false,
-            convertCount: 0,
-            peakHourNeeds: 0,
-            longTermPlan: {
-                female: 0,
-                male: 0
-            },
             alternativeSuggestions: []
         };
-        
-        // 如果女性失败率超过10%，考虑优化
-        if (femaleFailRate > 0.1) {
-            // 计算需要转换的男厕位数量
-            // 1. 首先计算理想的女厕位数量
-            const idealFemaleStalls = Math.ceil(
-                (toiletStats.female.total * SIMULATION_CONFIG.FEMALE_DURATION) /
-                SIMULATION_CONFIG.DAY_DURATION * 1.2  // 增加20%缓冲
-            );
 
-            // 2. 计算可以转换的男厕位数量
-            // 确保男厕位使用率不会因转换而超过80%
-            const maxConvertibleMaleStalls = Math.floor(
-                maleStalls - (toiletStats.male.total * SIMULATION_CONFIG.MALE_DURATION) /
-                (SIMULATION_CONFIG.DAY_DURATION * 0.8)  // 保持80%利用率
-            );
+        // 计算失败率
+        const maleFailRate = toiletStats.male.failed / toiletStats.male.total;
+        const femaleFailRate = toiletStats.female.failed / toiletStats.female.total;
 
-            // 3. 计算建议转换的数量
-            suggestion.convertCount = Math.min(
-                maxConvertibleMaleStalls,
-                idealFemaleStalls - totalStalls.female
-            );
-
-            // 如果建议数量为负数或0，则不建议转换
-            suggestion.convertCount = Math.max(0, suggestion.convertCount);
-
-            // 对于高峰时段的特殊建议
-            if (suggestion.convertCount === 0 && femaleFailRate > 0.2) {
-                suggestion.peakHourNeeds = Math.ceil(
-                    (toiletStats.female.failed * SIMULATION_CONFIG.FEMALE_DURATION) /
-                    (SIMULATION_CONFIG.DAY_DURATION / 24)  // 按小时计算
-                );
+        if (femaleFailRate > 0.1 || maleFailRate > 0.1) {
+            // 现有的建议逻辑保持不变
+            if (femaleFailRate > 0.2) {
+                suggestion.alternativeSuggestions.push({
+                    type: 'warning',
+                    content: `女性如厕需求压力较大，建议增加${Math.ceil(toiletStats.female.failed / 20)}个女性厕位`
+                });
             }
 
-            // 计算长期规划建议
-            // 考虑高峰时段的需求，计算理想的厕位数量
-            const peakHourFactor = Math.max(...SIMULATION_CONFIG.PEAK_HOURS.map(p => p.ratio));
-            const idealCapacity = {
-                female: Math.ceil(
-                    (toiletStats.female.total * SIMULATION_CONFIG.FEMALE_DURATION * peakHourFactor) /
-                    (SIMULATION_CONFIG.DAY_DURATION * 0.7)  // 控制使用率在70%以下
-                ),
-                male: Math.ceil(
-                    (toiletStats.male.total * SIMULATION_CONFIG.MALE_DURATION * peakHourFactor) /
-                    (SIMULATION_CONFIG.DAY_DURATION * 0.7)
-                )
-            };
-
-            // 计算需要新增的厕位数量
-            suggestion.longTermPlan = {
-                female: Math.max(0, idealCapacity.female - femaleStalls),
-                male: Math.max(0, idealCapacity.male - maleStalls)
-            };
-
-            // 检查是否需要临时厕所或引流方案
-            if (suggestion.longTermPlan.female > totalStalls.female) {
-                // 计算需要增加的总厕位数
-                const totalNewStalls = suggestion.longTermPlan.female + suggestion.longTermPlan.male;
-                const currentTotalStalls = totalStalls.female + totalStalls.male;
-                
-                if (totalNewStalls > currentTotalStalls * 1.5) {
-                    const availableLocations = TEMPORARY_LOCATIONS[toiletName] || [];
-                    const unusedLocations = availableLocations.filter(loc => 
-                        !relatedTemporaryToilets.some(t => t.name === loc.name)
-                    );
-                    
-                    if (unusedLocations.length > 0) {
-                        suggestion.alternativeSuggestions.push({
-                            type: 'new_toilet',
-                            message: '建议新建临时公厕：',
-                            locations: unusedLocations.map(loc => {
-                                // 根据使用压力计算男女厕位数量
-                                const totalStalls = loc.recommended.female + loc.recommended.male;
-                                // 确保男厕位至少占20%
-                                let recommendedMale = Math.max(
-                                    Math.ceil(totalStalls * 0.2),  // 至少20%
-                                    Math.round(totalStalls * idealMaleRatio)  // 或根据压力计算
-                                );
-                                let recommendedFemale = totalStalls - recommendedMale;
-                                
-                                // 如果女厕位比例过低，适当调整总数
-                                if (recommendedFemale / totalStalls < 0.6) {
-                                    const newTotal = Math.ceil(recommendedMale / 0.3);  // 确保男厕位不超过30%
-                                    recommendedFemale = newTotal - recommendedMale;
-                                }
-                                
-                                return {
-                                    ...loc,
-                                    recommended: {
-                                        female: recommendedFemale,
-                                        male: recommendedMale
-                                    }
-                                };
-                            })
-                        });
-                    }
-                } else {
-                    // 如果需要增加的女厕位超过现有数量但未超过1.5倍
-                    suggestion.alternativeSuggestions.push({
-                        type: 'temporary',
-                        count: Math.ceil(suggestion.longTermPlan.female / 2),
-                        message: `建议在景区适当位置增设${Math.ceil(suggestion.longTermPlan.female / 2)}个临时女厕位`
-                    });
-                }
-
-                // 添加附近设施引流建议
-                const nearbyFacilities = NEARBY_FACILITIES[toiletName] || [];
-                if (nearbyFacilities.length > 0) {
-                    suggestion.alternativeSuggestions.push({
-                        type: 'diversion',
-                        facilities: nearbyFacilities,
-                        message: '建议通过标识牌引导游客前往以下临近设施：'
-                    });
-                }
+            if (maleFailRate > 0.2) {
+                suggestion.alternativeSuggestions.push({
+                    type: 'warning',
+                    content: `男性如厕需求压力较大，建议增加${Math.ceil(toiletStats.male.failed / 30)}个男性厕位`
+                });
             }
 
-            // 如果需要增加厕位，则标记需要优化
-            if (suggestion.longTermPlan.female > 0 || suggestion.longTermPlan.male > 0) {
-                suggestion.needsOptimization = true;
+            // 添加临时厕所建议
+            const availableLocations = TEMPORARY_LOCATIONS[toiletName];
+            if (availableLocations && availableLocations.length > 0) {
+                suggestion.alternativeSuggestions.push({
+                    type: 'action',
+                    content: '可增设临时厕所位置：',
+                    locations: availableLocations.map(loc => ({
+                        name: loc.name,
+                        location: loc.location,
+                        space: loc.space,
+                        recommended: loc.recommended
+                    }))
+                });
+            }
+
+            // 添加附近商家引导建议
+            const facilities = nearbyFacilities[toiletName];
+            if (facilities && facilities.length > 0) {
+                suggestion.alternativeSuggestions.push({
+                    type: 'info',
+                    content: '临近设施推荐：',
+                    facilities: facilities.map(f => ({
+                        name: f.name,
+                        distance: f.distance,
+                        type: f.type,
+                        icon: getFacilityIcon(f.type)
+                    }))
+                });
             }
         }
-        
-        suggestion.needsOptimization = suggestion.convertCount > 0 || 
-            suggestion.peakHourNeeds > 0 || 
-            suggestion.longTermPlan.female > 0 || 
-            suggestion.longTermPlan.male > 0;
-        
-        if (suggestion.needsOptimization) {
-            // 如果是跨年模式，添加特殊建议
-            if (SIMULATION_CONFIG.NEW_YEAR_EVENT.enabled) {
-                const newYearSuggestion = {
-                    type: 'new_year_special',
-                    message: '跨年活动特别建议：',
-                    recommendations: SIMULATION_CONFIG.NEW_YEAR_EVENT.specialSuggestions
-                };
-                
-                // 确保 alternativeSuggestions 存在
-                if (!suggestion.alternativeSuggestions) {
-                    suggestion.alternativeSuggestions = [];
-                }
-                
-                suggestion.alternativeSuggestions.push(newYearSuggestion);
-            }
-            
+
+        if (suggestion.alternativeSuggestions.length > 0) {
             suggestions.push(suggestion);
         }
     });
-    
+
     return suggestions;
+}
+
+// 获取设施类型对应的图标
+function getFacilityIcon(type) {
+    const iconMap = {
+        '商场': 'shopping-mall',
+        '超市': 'shopping-cart',
+        '咖啡店': 'coffee',
+        '餐厅': 'utensils',
+        '书店': 'book',
+        '商业街': 'store',
+        '游客中心': 'info-circle',
+        '服务处': 'concierge-bell'
+    };
+    return iconMap[type] || 'building';
 }
 
 // 显示模拟结果
@@ -823,39 +762,68 @@ function showSimulationResults(stats) {
                 <div class="toilet-name">${suggestion.toiletName}</div>
                 <div class="suggestion-content">
                     ${suggestion.alternativeSuggestions.map(alt => {
-                        if (alt.type === 'new_year_special') {
+                        if (alt.facilities) {
                             return `
-                                <div class="new-year-special">
-                                    <strong>${alt.message}</strong><br>
-                                    ${alt.recommendations.map(rec => `• ${rec}`).join('<br>')}
+                                <div class="nearby-facilities">
+                                    <div class="facilities-title">${alt.content}</div>
+                                    <div class="facilities-list">
+                                        ${alt.facilities.map(f => `
+                                            <div class="facility-item">
+                                                <i class="fas fa-${f.icon}"></i>
+                                                <span class="facility-name">${f.name}</span>
+                                                <span class="facility-distance">${f.distance}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
                                 </div>
                             `;
-                        } else if (alt.type === 'new_toilet') {
-                            return `• ${alt.message}
-                                <button class="add-toilet-btn" 
-                                    id="add-toilet-${toiletName.replace(/\s+/g, '-')}"
-                                    onclick='addTemporaryToilets(${JSON.stringify({
-                                    parentName: toiletName,
-                                    locations: alt.locations
-                                })})'>
-                                    <i class="fas fa-plus"></i> 添加临时厕所
-                                </button><br>
-                                ${alt.locations.map(loc => 
-                                    `  - ${loc.name}<br>
-                                       &nbsp;&nbsp;位置：${loc.location}<br>
-                                       &nbsp;&nbsp;场地：${loc.space}<br>
-                                       &nbsp;&nbsp;建议配置：${loc.recommended.female}个女厕位、${loc.recommended.male}个男厕位`
-                                ).join('<br><br>')}`;
+                        } else if (alt.type === 'action') {
+                            return `
+                                <div class="temporary-locations">
+                                    <div class="locations-title">${alt.content}</div>
+                                    <div class="locations-list">
+                                        ${alt.locations.map(loc => `
+                                            <div class="location-item">
+                                                <div class="location-info">
+                                                    <div class="location-name">${loc.name}</div>
+                                                    <div class="location-details">
+                                                        <span>${loc.location}</span>
+                                                        <span>${loc.space}</span>
+                                                    </div>
+                                                    <div class="stalls-info">
+                                                        <span class="female-stalls">
+                                                            <i class="fas fa-female"></i> ${loc.recommended.female}个
+                                                        </span>
+                                                        <span class="male-stalls">
+                                                            <i class="fas fa-male"></i> ${loc.recommended.male}个
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <button class="add-temp-toilet-btn" 
+                                                    onclick="addTemporaryToilet('${toiletName}', '${loc.name}')">
+                                                    <i class="fas fa-plus"></i>
+                                                    增设临时厕所
+                                                </button>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
                         }
-                        return `• ${alt.message}`;
-                    }).join('<br><br>')}
+                        return `
+                            <div class="suggestion-text ${alt.type}">
+                                <i class="fas fa-${alt.type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                                <span>${alt.content}</span>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
             </div>
         `;
-    });
+    }).join('');
 
     document.getElementById('toiletSuggestions').innerHTML = 
-        suggestions.length > 0 ? suggestionsHtml.join('') : '<div class="no-suggestions">当前配置已经较为合理</div>';
+        suggestions.length > 0 ? suggestionsHtml : '<div class="no-suggestions">当前配置已经较为合理</div>';
 
     // 显示结果区域
     document.getElementById('simulationResults').style.display = 'block';
@@ -906,6 +874,115 @@ function showSimulationResults(stats) {
             font-size: 14px;
             line-height: 1.4;
             color: #424242;
+        }
+
+        .nearby-facilities {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 6px;
+        }
+        
+        .facilities-title {
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #2196F3;
+        }
+        
+        .facilities-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+        }
+        
+        .facility-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .facility-item i {
+            color: #666;
+        }
+        
+        .facility-distance {
+            color: #666;
+            margin-left: auto;
+        }
+
+        .temporary-locations {
+            margin-top: 12px;
+            padding: 12px;
+            background: #e3f2fd;
+            border-radius: 6px;
+        }
+        
+        .locations-title {
+            font-weight: 500;
+            margin-bottom: 12px;
+            color: #1976d2;
+        }
+        
+        .locations-list {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .location-item {
+            background: white;
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .location-info {
+            flex: 1;
+        }
+        
+        .location-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .location-details {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .stalls-info {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+        }
+        
+        .add-temp-toilet-btn {
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+        
+        .add-temp-toilet-btn:hover {
+            background: #1976d2;
+        }
+        
+        .add-temp-toilet-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
         }
     `;
     document.head.appendChild(style);
@@ -1110,64 +1187,82 @@ function saveConfig() {
         const lastId = Math.max(...toiletsData.map(t => t.id));
         let idCounter = lastId + 1;
 
+        // 创建所有新的临时厕所数据
+        let allNewToilets = [];
+
         // 为每个主要厕所添加临时厕所
         Object.entries(newYearLocations).forEach(([parentName, locations]) => {
-            // 检查是否已经添加过这些临时厕所
-            const existingTemporary = toiletsData.filter(t => 
-                t.isTemporary && t.parentToilet === parentName
-            );
+            // 检查每个位置是否已经添加过临时厕所
+            locations.forEach(loc => {
+                const existingTemporary = toiletsData.find(t => 
+                    t.isTemporary && 
+                    t.parentToilet === parentName && 
+                    t.name === loc.name
+                );
 
-            if (existingTemporary.length === 0) {
-                // 创建新的临时厕所
-                const newToilets = locations.map(loc => ({
-                    id: idCounter++,
-                    name: loc.name,
-                    address: loc.location,
-                    distance: loc.location.match(/\d+米/)[0],
-                    status: '正常',
-                    rating: 0,
-                    ratingCount: 0,
-                    isTemporary: true,
-                    parentToilet: parentName,
-                    stalls: [
-                        ...Array(loc.recommended.female).fill().map(() => ({ 
-                            status: '空', 
-                            gender: '女', 
-                            state: 'empty', 
-                            reservedBy: null 
-                        })),
-                        ...Array(loc.recommended.male).fill().map(() => ({ 
-                            status: '空', 
-                            gender: '男', 
-                            state: 'empty', 
-                            reservedBy: null 
-                        }))
-                    ]
-                }));
+                if (!existingTemporary) {
+                    // 创建新的临时厕所
+                    const newToilet = {
+                        id: idCounter++,
+                        name: loc.name,
+                        address: loc.location,
+                        distance: loc.location.match(/\d+米/)[0],
+                        status: '正常',
+                        rating: 0,
+                        ratingCount: 0,
+                        isTemporary: true,
+                        parentToilet: parentName,
+                        stalls: [
+                            ...Array(loc.recommended.female).fill().map(() => ({ 
+                                status: '空', 
+                                gender: '女', 
+                                state: 'empty', 
+                                reservedBy: null 
+                            })),
+                            ...Array(loc.recommended.male).fill().map(() => ({ 
+                                status: '空', 
+                                gender: '男', 
+                                state: 'empty', 
+                                reservedBy: null 
+                            }))
+                        ]
+                    };
 
-                // 添加新厕所数据
-                toiletsData.push(...newToilets);
-            }
+                    // 收集所有新的临时厕所
+                    allNewToilets.push(newToilet);
+                }
+            });
         });
 
-        // 保存更新后的数据
-        localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
+        // 如果有新的临时厕所要添加
+        if (allNewToilets.length > 0) {
+            // 直接更新本地存储
+            toiletsData = [...toiletsData, ...allNewToilets];
+            localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
 
-        // 短暂延迟后关闭面板并切换到首页
-        setTimeout(() => {
-            toggleConfigPanel();
-            // 恢复保存按钮状态
-            saveBtn.disabled = false;
-            saveBtn.style.opacity = '1';
-            
-            // 切换到首页
-            switchTab('home');
-            // 强制重新渲染首页列表
-            initPage();
-            
-            // 显示提示
-            showToast('已自动添加跨年临时厕所设施', 'success');
-        }, 800);
+            // 切换到首页并刷新列表
+            setTimeout(() => {
+                toggleConfigPanel();
+                saveBtn.disabled = false;
+                saveBtn.style.opacity = '1';
+                
+                // 切换到首页
+                switchTab('home');
+                // 强制重新渲染首页列表
+                initPage();
+                
+                // 显示提示
+                showToast(`已自动添加${allNewToilets.length}个跨年临时厕所设施`, 'success');
+            }, 800);
+        } else {
+            // 如果没有新增临时厕所，显示提示
+            showToast('所有临时厕所已存在', 'info');
+            setTimeout(() => {
+                toggleConfigPanel();
+                saveBtn.disabled = false;
+                saveBtn.style.opacity = '1';
+            }, 800);
+        }
     } else {
         // 原有的关闭面板逻辑
         setTimeout(() => {
@@ -1417,22 +1512,6 @@ function updateNewYearConfig(event) {
             midnightPeak.remove();
         }
   
-        // 移除所有跨年临时厕所
-        let toiletsData = JSON.parse(localStorage.getItem('toiletsData'));
-        const originalToilets = toiletsData.filter(t => !t.isTemporary);
-        
-        // 如果确实移除了临时厕所，才保存和提示
-        if (toiletsData.length !== originalToilets.length) {
-            localStorage.setItem('toiletsData', JSON.stringify(originalToilets));
-            
-            // 切换到首页并刷新列表
-            switchTab('home');
-            initPage();
-            
-            // 显示提示
-            showToast('已移除跨年临时厕所设施', 'info');
-        }
-  
         // 调用重置配置函数
         resetConfig();
   
@@ -1440,6 +1519,11 @@ function updateNewYearConfig(event) {
         document.querySelectorAll('.simulation-config input').forEach(input => {
             input.disabled = false;
         });
+  
+        // 提示用户可以手动移除临时厕所
+        if (document.querySelector('[data-temporary="true"]')) {
+            showToast('您可以使用右下角的按钮移除临时厕所', 'info');
+        }
     }
 }
 
@@ -1461,4 +1545,89 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
         console.warn('Failed to restore new year mode state:', e);
     }
-}); 
+});
+
+// 添加临时厕所
+function addTemporaryToilet(parentName, locationName) {
+    try {
+        // 获取现有厕所数据
+        let toiletsData = JSON.parse(localStorage.getItem('toiletsData'));
+        const lastId = Math.max(...toiletsData.map(t => t.id));
+
+        // 检查是否已存在
+        const existingToilet = toiletsData.find(t => 
+            t.isTemporary && 
+            t.parentToilet === parentName && 
+            t.name === locationName
+        );
+
+        if (existingToilet) {
+            showToast('该位置已存在临时厕所', 'info');
+            return;
+        }
+
+        // 获取位置配置
+        const locationConfig = TEMPORARY_LOCATIONS[parentName]
+            .find(loc => loc.name === locationName);
+
+        if (!locationConfig) {
+            showToast('未找到位置配置', 'error');
+            return;
+        }
+
+        // 创建新的临时厕所
+        const newToilet = {
+            id: lastId + 1,
+            name: locationConfig.name,
+            address: locationConfig.location,
+            distance: locationConfig.location.match(/\d+米/)[0],
+            status: '正常',
+            rating: 0,
+            ratingCount: 0,
+            isTemporary: true,
+            parentToilet: parentName,
+            stalls: [
+                ...Array(locationConfig.recommended.female).fill().map(() => ({ 
+                    status: '空', 
+                    gender: '女', 
+                    state: 'empty', 
+                    reservedBy: null 
+                })),
+                ...Array(locationConfig.recommended.male).fill().map(() => ({ 
+                    status: '空', 
+                    gender: '男', 
+                    state: 'empty', 
+                    reservedBy: null 
+                }))
+            ]
+        };
+
+        // 更新数据
+        toiletsData.push(newToilet);
+        localStorage.setItem('toiletsData', JSON.stringify(toiletsData));
+
+        // 切换到首页并刷新列表
+        switchTab('home');
+        initPage();
+
+        // 显示成功提示
+        showToast('已成功添加临时厕所', 'success');
+
+        // 滚动到新添加的厕所
+        setTimeout(() => {
+            const newToiletElement = document.querySelector(`[data-toilet-id="${newToilet.id}"]`);
+            if (newToiletElement) {
+                newToiletElement.scrollIntoView({ behavior: 'smooth' });
+                newToiletElement.classList.add('new-toilet');
+                setTimeout(() => newToiletElement.classList.remove('new-toilet'), 5000);
+            }
+        }, 300);
+
+    } catch (error) {
+        console.error('添加临时厕所失败:', error);
+        showToast('添加临时厕所失败，请重试', 'error');
+    }
+}
+
+// 确保函数在全局作用域可用
+window.addTemporaryToilet = addTemporaryToilet; 

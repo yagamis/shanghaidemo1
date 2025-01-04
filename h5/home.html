@@ -1470,6 +1470,41 @@
         .toilet-item {
             position: relative;  /* 为绝对定位的标签提供参考 */
         }
+
+        /* 悬浮的移除临时厕所按钮 */
+        .remove-temporary-btn {
+            position: fixed;
+            bottom: 80px;  /* 避免与底部标签栏重叠 */
+            right: 20px;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .remove-temporary-btn button {
+            background: #ff5252;
+            color: white;
+            border: none;
+            border-radius: 24px;
+            padding: 12px 24px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .remove-temporary-btn button:hover {
+            background: #ff1744;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+        }
+
+        .remove-temporary-btn button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
@@ -1695,6 +1730,14 @@
 
     <!-- 添加 Toast 容器 -->
     <div id="toast" class="toast"></div>
+
+    <!-- 悬浮的移除临时厕所按钮 -->
+    <div id="removeTemporaryBtn" class="remove-temporary-btn" style="display: none;">
+        <button onclick="removeAllTemporaryToilets()">
+            <i class="fas fa-trash-alt"></i>
+            移除所有临时厕所
+        </button>
+    </div>
 
     <script>
         // 页面加载时检查用户角色并控制统计Tab的显示
