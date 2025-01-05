@@ -663,6 +663,15 @@
     <div class="ai-assistant" onclick="openAIChat()">
         <i class="fas fa-robot"></i>
     </div>
+    <script>
+        function openAIChat() {
+            // 从url参数中获取当前厕位并传递
+            const urlParams = new URLSearchParams(window.location.search);
+            const stallId = urlParams.get('stallId');
+            // 在当前窗口打开
+            window.location.href = `ai-chat.html?stallId=${stallId}`;
+        }
+    </script>
 
     <!-- 将脚本移到 body 末尾 -->
     <script src="js/stall-detail.js"></script>
@@ -679,10 +688,7 @@
             }, 1000);
         });
 
-        function openAIChat() {
-            // 在新浏览器窗口打开
-            window.open('https://share.fastgpt.in/chat/share?shareId=xty1tqmrmg9qm6wbmfqscc2e', '_blank');
-        }
+       
     </script>
 </body>
 </html> 
