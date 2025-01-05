@@ -8,6 +8,11 @@
 
 代码文件夹:
 
+
+- h5/
+- `index.html`是网页前端的入口文件,直接可以登陆使用（用户名和密码已填，分普通用户和管理员）
+
+- ·hardware/
 - `smart_restroom_ws63`是星闪模组使用的代码,采用官方SDK,20241022版本搭建开发环境,放置在`near_link_sdk/applications/sample/wifi-iot/app`目录
 - `startup`目录为星闪模组客户端的代码,主要功能与Hi3861共同组成星闪的通信网关,转发与server和gateway的消息,放置在`near_link_sdk/applications/sample/wifi-iot/app`目录
 
