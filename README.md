@@ -10,7 +10,7 @@
 
 
 - h5/
-- `index.html`是网页前端的入口文件,直接可以登陆使用（用户名和密码已填，分普通用户和管理员）
+- `index.html`是网页前端的入口文件,直接可以登陆使用（用户名和密码已填，分普通用户和管理员），已上传到网站，可以直接打开使用：https://ohos.nutpi.net/privacy/smartrestroom/h5/index.html
 
 - hardware/
 - `smart_restroom_ws63`是星闪模组使用的代码,采用官方SDK,20241022版本搭建开发环境,放置在`near_link_sdk/applications/sample/wifi-iot/app`目录
